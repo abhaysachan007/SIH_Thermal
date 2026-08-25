@@ -1,0 +1,10 @@
+
+RESUME,shelter_3d,db
+/PREP7
+/VIEW,1,1,1,1
+/ANG,1
+/AUTO,1
+/PNUM,VOLU,1
+/TYPE,1,5
+/SHRINK,0.05
+VPLOT

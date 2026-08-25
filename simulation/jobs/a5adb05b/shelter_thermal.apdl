@@ -1,0 +1,144 @@
+! ============================================================
+! shelter_thermal.apdl
+! Parameterized transient thermal simulation of a passive shelter
+! Parameters injected by ansys_engine.py via parameter input file
+! ============================================================
+
+/BATCH
+/TITLE, Ladakh Passive Shelter Thermal Analysis
+
+! --- Geometry (m) ---
+*SET,SLEN,5.0
+*SET,SWID,4.0
+*SET,SHGT,3.0
+*SET,WTHK,0.5
+
+! --- Wall material ---
+*SET,KWALL,0.72
+*SET,RHOWALL,1800
+*SET,CPWALL,840
+
+! --- Roof material ---
+*SET,KROOF,0.72
+*SET,RHOROOF,1800
+*SET,CPROOF,840
+
+! --- Floor material ---
+*SET,KFLOOR,1.5
+*SET,RHOFLOOR,2000
+*SET,CPFLOOR,900
+
+! --- Glazing ---
+*SET,KGLASS,1.05
+*SET,RHOGLASS,2500
+*SET,CPGLASS,750
+
+! --- Simulation ---
+*SET,TINIT,-5.0
+*SET,DT,1800
+*SET,NSTEPS,48
+
+! --- Climate arrays (48 half-hour slots = 24 hours x2) ---
+*DIM,TAMB,ARRAY,48
+*DIM,QSOL,ARRAY,48
+
+TAMB(1)  = -18,-18,-17,-17,-16,-15,-12,-8,-4,-1,2,4
+TAMB(13) = 5,5,4,2,-1,-4,-8,-12,-15,-17,-18,-18
+TAMB(25) = -18,-18,-17,-17,-16,-15,-12,-8,-4,-1,2,4
+TAMB(37) = 5,5,4,2,-1,-4,-8,-12,-15,-17,-18,-18
+
+QSOL(1)  = 0,0,0,0,0,20,80,200,350,450,530,580
+QSOL(13) = 560,490,380,230,100,30,5,0,0,0,0,0
+QSOL(25) = 0,0,0,0,0,20,80,200,350,450,530,580
+QSOL(37) = 560,490,380,230,100,30,5,0,0,0,0,0
+
+! ============================================================
+! PREPROCESSOR
+! ============================================================
+/PREP7
+
+MP,KXX,1,KWALL
+MP,DENS,1,RHOWALL
+MP,C,1,CPWALL
+
+MP,KXX,2,KROOF
+MP,DENS,2,RHOROOF
+MP,C,2,CPROOF
+
+MP,KXX,3,KFLOOR
+MP,DENS,3,RHOFLOOR
+MP,C,3,CPFLOOR
+
+MP,KXX,4,KGLASS
+MP,DENS,4,RHOGLASS
+MP,C,4,CPGLASS
+
+ET,1,SOLID70
+
+! Outer shelter box
+BLOCK,0,(SLEN+2*WTHK),0,(SWID+2*WTHK),0,(SHGT+WTHK)
+! Interior void
+BLOCK,WTHK,(SLEN+WTHK),WTHK,(SWID+WTHK),0,SHGT
+! Subtract to get walls + roof shell
+VSBV,1,2,,DELETE,KEEP
+VATT,1,,1
+
+! Floor slab
+BLOCK,WTHK,(SLEN+WTHK),WTHK,(SWID+WTHK),-WTHK,0
+VATT,3,,1,,3
+
+! Coarse mesh (respects Student 32k node limit)
+ESIZE,0.3
+VMESH,ALL
+
+! Initial temperature
+IC,ALL,TEMP,TINIT
+
+ALLSEL,ALL
+
+! ============================================================
+! SOLUTION
+! ============================================================
+/SOLU
+ANTYPE,TRANS
+TRNOPT,FULL
+TINTP,,0.005,0.025,0.1
+KBC,0
+
+*DO,I,1,NSTEPS
+  *SET,TCUR,I*DT
+  *SET,TAMB_NOW,TAMB(I)
+  *SET,QSOL_NOW,QSOL(I)
+
+  ALLSEL,ALL
+  NSEL,EXT
+  SF,ALL,CONV,8.0,TAMB_NOW
+
+  NSEL,S,LOC,Y,0,0.01
+  SF,ALL,HFLUX,QSOL_NOW
+
+  ALLSEL,ALL
+  TIME,TCUR
+  DELTIM,DT,DT/2,DT*2
+  SOLVE
+*ENDDO
+
+FINISH
+
+! ============================================================
+! POST PROCESSING
+! ============================================================
+/POST26
+
+ALLSEL,ALL
+NSEL,S,LOC,Y,WTHK,WTHK+0.01
+*GET,NINT,NODE,0,NUM,MIN
+ALLSEL,ALL
+
+NSOL,2,NINT,TEMP,,T_INTERIOR
+
+/OUTPUT,shelter_results,csv
+PRVAR,2
+/OUTPUT
+
+FINISH

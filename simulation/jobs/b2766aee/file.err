@@ -1,0 +1,76 @@
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       19:06:00
+
+ *** WARNING ***                         ELAPSED TIME =       5.775   TIME= 19:06:01
+ The /BATCH command must be the first line of input.  The /BATCH command 
+ is ignored.                                                             
+
+ *** ERROR ***                           ELAPSED TIME =       5.788   TIME= 19:06:01
+ Volume 3 has invalid topology for mapped brick meshing.                 
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       19:24:55
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       19:25:54
+
+ *** WARNING ***                         ELAPSED TIME =      31.334   TIME= 19:26:10
+ D is not a recognized BEGIN command, abbreviation, or macro.  This      
+ command will be ignored.                                                
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       19:33:07
+
+ *** WARNING ***                         ELAPSED TIME =      17.382   TIME= 19:33:08
+ VOLU 1 DOES NOT EXIST.                                                  
+
+ *** WARNING ***                         ELAPSED TIME =      17.382   TIME= 19:33:08
+ VOLU 2 DOES NOT EXIST.                                                  
+
+ *** WARNING ***                         ELAPSED TIME =      17.382   TIME= 19:33:08
+ VOLU 3 DOES NOT EXIST.                                                  
+
+ *** WARNING ***                         ELAPSED TIME =      17.382   TIME= 19:33:08
+ VOLU 4 DOES NOT EXIST.                                                  
+
+ *** WARNING ***                         ELAPSED TIME =      17.382   TIME= 19:33:08
+ VOLU 5 DOES NOT EXIST.                                                  
+
+ *** WARNING ***                         ELAPSED TIME =      17.382   TIME= 19:33:08
+ VOLU 6 DOES NOT EXIST.                                                  
+
+ *** WARNING ***                         ELAPSED TIME =     210.028   TIME= 19:36:21
+ The EPLOT command cannot be executed.  The selected elements cannot be  
+ displayed by PowerGraphics.  To correct this situation, select          
+ different elements or turn off PowerGraphics.                           
+
+ *** WARNING ***                         ELAPSED TIME =     235.974   TIME= 19:36:47
+ Element type 1 is not yet defined.                                      
+  Use the ET command to define this element type.                        
+
+ *** WARNING ***                         ELAPSED TIME =     263.482   TIME= 19:37:14
+ Material 45 is not defined.  The MPCHG command is ignored.              
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       21:40:30
+
+ *** WARNING ***                         ELAPSED TIME =       5.743   TIME= 21:40:31
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.743   TIME= 21:40:31
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.743   TIME= 21:40:31
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.743   TIME= 21:40:31
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.743   TIME= 21:40:31
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =      73.770   TIME= 21:41:39
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =      74.001   TIME= 21:41:40
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =      74.099   TIME= 21:41:40
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =      74.216   TIME= 21:41:40
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =      74.318   TIME= 21:41:40
+ Unrecognized /COLOR parameter MAT.                                      

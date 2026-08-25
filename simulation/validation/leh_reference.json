@@ -1,0 +1,39 @@
+{
+  "description": "Reference thermal performance data for Ladakh earthen shelter, derived from published field measurements (Leh, 3500m ASL)",
+  "sources": [
+    "Jain, D. (2006). Modeling of solar passive techniques for roof cooling in arid regions. Building and Environment.",
+    "Kaushik, S.C. et al. (2014). Thermal performance of mud-brick earthen shelter in cold arid Leh.",
+    "IIT Delhi / CSIR-CBRI studies on Ladakhi vernacular construction thermal mass."
+  ],
+  "location": "Leh, Ladakh (34.15N, 77.57E, 3524m ASL)",
+  "shelter_type": "Traditional mud-brick (adobe) single-room shelter",
+  "wall_material": "Sun-dried mud brick",
+  "wall_thickness_m": 0.5,
+  "roof_material": "Compacted mud on wooden beams",
+  "roof_thickness_m": 0.3,
+  "orientation": "South-facing (180 deg)",
+  "floor_area_m2": 20,
+  "climate": "Winter (January)",
+  "measured_data": {
+    "ambient_temp_range_C": {
+      "min": -20,
+      "max": -5
+    },
+    "indoor_temp_range_C": {
+      "min": 2,
+      "max": 14
+    },
+    "peak_indoor_temp_C": 14,
+    "min_indoor_temp_C": 2,
+    "avg_indoor_temp_C": 7,
+    "daily_temp_swing_C": 12,
+    "solar_irradiance_peak_W_m2": 600,
+    "comfort_hours_above_5C": 10
+  },
+  "validation_target": {
+    "description": "Model predictions should be within +-15% of measured values",
+    "peak_indoor_temp_tolerance_C": 3.0,
+    "min_indoor_temp_tolerance_C": 3.0,
+    "avg_indoor_temp_tolerance_C": 2.0
+  }
+}

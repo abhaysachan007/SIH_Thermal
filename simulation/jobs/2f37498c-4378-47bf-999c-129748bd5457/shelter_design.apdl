@@ -1,0 +1,272 @@
+/TITLE, Ladakh Passive Shelter - Parametric 3D Model (Frontend Mirror)
+
+! ============================================================
+! PARAMETERS injected by run_design.apdl:
+!   SLEN   - Length (m)         SWID  - Width (m)
+!   SHGT   - Wall Height (m)    WTHK  - Wall Thickness (m)
+!   NWIN   - Windows on south wall   NDOOR - Doors (0,1,2)
+!   SHAPE  - 0=Rectangular  1=Dome/Igloo
+!   ROOFT  - 0=Flat roof    1=Gable pitched roof
+!   KWALL/RHOWALL/CPWALL  - Wall material properties
+!   KROOF/RHOROOF/CPROOF  - Roof material properties
+!   KFLOOR/RHOFLOOR/CPFLOOR - Floor material properties
+! ============================================================
+
+! Defaults (overridden by run_design.apdl header)
+*SET,SLEN,6.0   $ *SET,SWID,4.0   $ *SET,SHGT,3.0  $ *SET,WTHK,0.45
+*SET,NWIN,3     $ *SET,NDOOR,1    $ *SET,SHAPE,0   $ *SET,ROOFT,1
+*SET,KWALL,0.72 $ *SET,RHOWALL,1800 $ *SET,CPWALL,840
+*SET,KROOF,0.15 $ *SET,RHOROOF,650  $ *SET,CPROOF,1200
+*SET,KFLOOR,1.80$ *SET,RHOFLOOR,2400$ *SET,CPFLOOR,900
+
+/PREP7
+ET,1,SOLID70
+
+! --- Materials ---
+MP,KXX,1,KWALL  $ MP,DENS,1,RHOWALL  $ MP,C,1,CPWALL
+MP,KXX,2,KROOF  $ MP,DENS,2,RHOROOF  $ MP,C,2,CPROOF
+MP,KXX,3,1.80   $ MP,DENS,3,2400     $ MP,C,3,900
+MP,KXX,4,1.00   $ MP,DENS,4,2500     $ MP,C,4,750
+MP,KXX,5,0.15   $ MP,DENS,5,650      $ MP,C,5,1200
+MP,KXX,6,KFLOOR $ MP,DENS,6,RHOFLOOR $ MP,C,6,CPFLOOR
+
+! ============================================================
+*IF,SHAPE,EQ,1,THEN
+! ===========================================================
+! DOME / IGLOO (mirrors frontend iglooMat hemisphere)
+! ===========================================================
+  *SET,DOME_R,(SLEN+SWID)*0.25+0.3
+  *SET,DOME_H,SHGT
+  TYPE,1 $ MAT,3
+  CYLIND,0,(DOME_R+0.25),-0.12,0,0,360
+  TYPE,1 $ MAT,6
+  CYLIND,0,(DOME_R-0.1),0,0.12,0,360
+  TYPE,1 $ MAT,1
+  SPHERE,(DOME_R-WTHK),DOME_R,0,90,0,360
+  TYPE,1 $ MAT,1
+  *SET,TUNL,1.4
+  *SET,TUNW,0.9
+  CYLIND,0,TUNW/2,DOME_R,(DOME_R+TUNL),0,180
+
+*ELSE
+! ===========================================================
+! RECTANGULAR HOUSE (mirrors frontend buildWall engine)
+! ===========================================================
+
+  ! 1. Foundation Plinth (Mat 3)
+  TYPE,1 $ MAT,3
+  BLOCK,0,(SLEN+2*WTHK),0,(SWID+2*WTHK),-0.3,0
+
+  ! 2. Floor Slab (Mat 6)
+  TYPE,1 $ MAT,6
+  BLOCK,WTHK,(SLEN+WTHK),WTHK,(SWID+WTHK),0,0.15
+
+  ! 3. North Wall - Solid (Mat 1)
+  TYPE,1 $ MAT,1
+  BLOCK,WTHK,(SLEN+WTHK),(SWID+WTHK),(SWID+2*WTHK),0,SHGT
+
+  ! 4. West Wall - Solid (Mat 1)
+  TYPE,1 $ MAT,1
+  BLOCK,0,WTHK,0,(SWID+2*WTHK),0,SHGT
+
+  ! 5. East Wall - Solid (Mat 1)
+  TYPE,1 $ MAT,1
+  BLOCK,(SLEN+WTHK),(SLEN+2*WTHK),0,(SWID+2*WTHK),0,SHGT
+
+  ! 6. South Wall - Dynamic openings (mirrors frontend layout engine)
+  *SET,MARGIN,0.4
+  *SET,TITEMS,NDOOR+NWIN
+  *SET,DOOR_W,0.9
+  *SET,DOOR_H,2.1
+  *SET,WIN_W,1.2
+  *SET,WIN_H,1.2
+  *SET,WIN_SILL,0.85
+  *SET,WIN_TOP,WIN_SILL+WIN_H
+
+  ! Cursor starts at left margin
+  *SET,CUR,WTHK+MARGIN
+
+  ! Left corner pillar (before door)
+  TYPE,1 $ MAT,1
+  BLOCK,WTHK,CUR,0,WTHK,0,SHGT
+
+  ! DOOR 1
+  *IF,NDOOR,GE,1,THEN
+    *SET,DX1,CUR
+    *SET,DX2,CUR+DOOR_W
+    TYPE,1 $ MAT,5
+    BLOCK,DX1,DX2,(WTHK*0.25),(WTHK*0.75),0,DOOR_H
+    *SET,CUR,DX2+0.35
+  *ENDIF
+
+  ! DOOR 2
+  *IF,NDOOR,GE,2,THEN
+    *SET,DX3,CUR
+    *SET,DX4,CUR+DOOR_W
+    TYPE,1 $ MAT,1
+    BLOCK,DX2,DX3,0,WTHK,0,SHGT
+    TYPE,1 $ MAT,5
+    BLOCK,DX3,DX4,(WTHK*0.25),(WTHK*0.75),0,DOOR_H
+    *SET,CUR,DX4+0.35
+  *ENDIF
+
+  ! Compute window gap
+  *SET,END_X,WTHK+SLEN-MARGIN
+  *SET,WIN_GAP,0.3
+  *IF,NWIN,GT,0,THEN
+    *SET,WIN_GAP,(END_X-CUR-NWIN*WIN_W)/NWIN
+    *IF,WIN_GAP,LT,0.2,THEN
+      *SET,WIN_GAP,0.2
+    *ENDIF
+  *ENDIF
+
+  ! WINDOW 1
+  *SET,PREV_WIN_END,CUR
+  *IF,NWIN,GE,1,THEN
+    *SET,WX1,CUR
+    *SET,WX2,CUR+WIN_W
+    TYPE,1 $ MAT,1
+    BLOCK,PREV_WIN_END,WX1,0,WTHK,0,SHGT
+    BLOCK,WX1,WX2,0,WTHK,0,WIN_SILL
+    TYPE,1 $ MAT,4
+    BLOCK,WX1,WX2,(WTHK*0.35),(WTHK*0.65),WIN_SILL,WIN_TOP
+    *SET,PREV_WIN_END,WX2
+    *SET,CUR,WX2+WIN_GAP
+  *ENDIF
+
+  ! WINDOW 2
+  *IF,NWIN,GE,2,THEN
+    *SET,WX3,CUR
+    *SET,WX4,CUR+WIN_W
+    TYPE,1 $ MAT,1
+    BLOCK,PREV_WIN_END,WX3,0,WTHK,0,SHGT
+    BLOCK,WX3,WX4,0,WTHK,0,WIN_SILL
+    TYPE,1 $ MAT,4
+    BLOCK,WX3,WX4,(WTHK*0.35),(WTHK*0.65),WIN_SILL,WIN_TOP
+    *SET,PREV_WIN_END,WX4
+    *SET,CUR,WX4+WIN_GAP
+  *ENDIF
+
+  ! WINDOW 3
+  *IF,NWIN,GE,3,THEN
+    *SET,WX5,CUR
+    *SET,WX6,CUR+WIN_W
+    TYPE,1 $ MAT,1
+    BLOCK,PREV_WIN_END,WX5,0,WTHK,0,SHGT
+    BLOCK,WX5,WX6,0,WTHK,0,WIN_SILL
+    TYPE,1 $ MAT,4
+    BLOCK,WX5,WX6,(WTHK*0.35),(WTHK*0.65),WIN_SILL,WIN_TOP
+    *SET,PREV_WIN_END,WX6
+    *SET,CUR,WX6
+  *ENDIF
+
+  ! Right corner pillar
+  TYPE,1 $ MAT,1
+  BLOCK,PREV_WIN_END,(SLEN+WTHK),0,WTHK,0,SHGT
+
+  ! Lintel beam above all openings
+  *SET,MAX_OH,DOOR_H
+  *IF,WIN_TOP,GT,DOOR_H,THEN
+    *SET,MAX_OH,WIN_TOP
+  *ENDIF
+  *IF,SHGT-MAX_OH,GT,0.05,THEN
+    TYPE,1 $ MAT,1
+    BLOCK,WTHK,(SLEN+WTHK),0,WTHK,MAX_OH,SHGT
+  *ENDIF
+
+  ! 7. ROOF
+  *IF,ROOFT,EQ,1,THEN
+    ! Gable Pitched Roof (mirrors frontend roofType='pitched')
+    *SET,PH,1.6
+    TYPE,1 $ MAT,2
+    ! South slope
+    BLOCK,-0.4,(SLEN+2*WTHK+0.4),-0.4,(SWID/2+WTHK),SHGT,(SHGT+PH*0.55+0.15)
+    ! North slope
+    BLOCK,-0.4,(SLEN+2*WTHK+0.4),(SWID/2+WTHK),(SWID+2*WTHK+0.4),SHGT,(SHGT+PH*0.55+0.15)
+    ! Ridge cap
+    BLOCK,-0.4,(SLEN+2*WTHK+0.4),(SWID/2+WTHK-0.12),(SWID/2+WTHK+0.12),(SHGT+PH*0.55),(SHGT+PH+0.15)
+    ! Gable end walls
+    TYPE,1 $ MAT,1
+    BLOCK,(SLEN+WTHK),(SLEN+2*WTHK+0.4),-0.4,(SWID+2*WTHK+0.4),SHGT,(SHGT+PH*0.55)
+    BLOCK,-0.4,WTHK,-0.4,(SWID+2*WTHK+0.4),SHGT,(SHGT+PH*0.55)
+    ! Chimney stack (Mat 2)
+    TYPE,1 $ MAT,2
+    BLOCK,(WTHK+1.0),(WTHK+1.5),(WTHK+SWID*0.35),(WTHK+SWID*0.35+0.5),SHGT,(SHGT+PH+0.9)
+  *ELSE
+    ! Flat Roof with Overhang (mirrors roofType='flat')
+    TYPE,1 $ MAT,2
+    BLOCK,-0.3,(SLEN+2*WTHK+0.3),-0.3,(SWID+2*WTHK+0.3),SHGT,(SHGT+0.35)
+  *ENDIF
+
+*ENDIF
+
+! ============================================================
+! MESH
+! ============================================================
+*SET,EMSH,WTHK
+*IF,EMSH,LT,0.35,THEN
+  *SET,EMSH,0.35
+*ENDIF
+ESIZE,EMSH
+VMESH,ALL
+
+! ============================================================
+! GEOMETRY REPORT
+! ============================================================
+*SET,WALL_AREA,2*(SLEN+SWID)*SHGT
+*SET,SOUTH_WALL_AREA,SWID*SHGT
+*SET,ROOF_AREA,SLEN*SWID
+*SET,FLOOR_AREA,SLEN*SWID
+*SET,INT_VOL,SLEN*SWID*SHGT
+*GET,TOTAL_NODES,NODE,,COUNT
+
+! ============================================================
+! VIEW - Front (South) facade, matching frontend camera angle
+! ============================================================
+/VIEW,1,1.2,-1.8,1.0
+/VUP,1,Z
+/AUTO,1
+/PLOPTS,INFO,1
+/PLOPTS,FRAME,0
+/PNUM,MAT,1
+/NUM,1
+/COLOR,MAT,ORAN,1
+/COLOR,MAT,RED,2
+/COLOR,MAT,DGRA,3
+/COLOR,MAT,CYAN,4
+/COLOR,MAT,MAGE,5
+/COLOR,MAT,GREE,6
+/FACET,FINE
+/SHRINK,0.02
+
+/SHOW,PNG,,0
+PNGR,COMP,1
+PNGR,ORIENT,HORIZ
+/GFILE,1200
+VPLOT
+EPLOT
+/SHOW,CLOSE
+
+SAVE,shelter_3d,db,,ALL
+/NOPR
+
+*CFOPEN,geometry_out,csv,,APPEND
+*CFWRITE,PARAM,VALUE
+*CFWRITE,length_m,%SLEN%
+*CFWRITE,width_m,%SWID%
+*CFWRITE,height_m,%SHGT%
+*CFWRITE,wall_thickness_m,%WTHK%
+*CFWRITE,num_windows,%NWIN%
+*CFWRITE,num_doors,%NDOOR%
+*CFWRITE,shape_type,%SHAPE%
+*CFWRITE,roof_type,%ROOFT%
+*CFWRITE,wall_area_m2,%WALL_AREA%
+*CFWRITE,south_wall_area_m2,%SOUTH_WALL_AREA%
+*CFWRITE,roof_area_m2,%ROOF_AREA%
+*CFWRITE,floor_area_m2,%FLOOR_AREA%
+*CFWRITE,interior_volume_m3,%INT_VOL%
+*CFWRITE,total_nodes,%TOTAL_NODES%
+*CFCLOS
+
+FINISH
+/EOF

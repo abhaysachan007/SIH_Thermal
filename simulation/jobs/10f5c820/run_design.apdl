@@ -1,0 +1,6 @@
+/BATCH
+*SET,SLEN,9.0
+*SET,SWID,9.5
+*SET,SHGT,3.7
+*SET,WTHK,0.3
+/INPUT,shelter_design,apdl

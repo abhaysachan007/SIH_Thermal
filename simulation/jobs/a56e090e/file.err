@@ -1,0 +1,8 @@
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       19:05:12
+
+ *** WARNING ***                         ELAPSED TIME =       6.386   TIME= 19:05:14
+ The /BATCH command must be the first line of input.  The /BATCH command 
+ is ignored.                                                             
+
+ *** ERROR ***                           ELAPSED TIME =       6.473   TIME= 19:05:14
+ Volume 3 has invalid topology for mapped brick meshing.                 

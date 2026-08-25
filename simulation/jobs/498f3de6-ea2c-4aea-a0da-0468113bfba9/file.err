@@ -1,0 +1,24 @@
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       22:06:48
+
+ *** WARNING ***                         ELAPSED TIME =       5.844   TIME= 22:06:50
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.844   TIME= 22:06:50
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.844   TIME= 22:06:50
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.844   TIME= 22:06:50
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.845   TIME= 22:06:50
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =      63.137   TIME= 22:07:47
+ File front_view.apdl does not exist.                                    
+  The /INPUT command is ignored.                                         
+
+ *** WARNING ***                         ELAPSED TIME =      76.253   TIME= 22:08:00
+ FRONT_VI is not a recognized PREP7 command, abbreviation, or macro.     
+  This command will be ignored.                                          

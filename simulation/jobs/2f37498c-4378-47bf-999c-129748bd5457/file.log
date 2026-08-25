@@ -1,0 +1,19 @@
+/BATCH  
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       00:53:25
+/input,menust,tmp,''
+/GRA,POWER
+/GST,ON
+/PLO,INFO,3
+/GRO,CURL,ON
+/CPLANE,1   
+/REPLOT,RESIZE  
+WPSTYLE,,,,,,,,0
+vPLOT   
+VPLOt   
+NPLOT   
+EPLOT   
+KPLOT   
+LPLOT   
+APLOt   
+VPLOT   
+LPLOT   

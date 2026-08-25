@@ -1,0 +1,78 @@
+/TITLE, Ladakh Passive Shelter - 3D Geometry Design
+
+! --- Default parameters (overridden by params.apdl) ---
+*SET,SLEN,6.0
+*SET,SWID,4.0
+*SET,SHGT,3.0
+*SET,WTHK,0.45
+
+! ============================================================
+! PREPROCESSOR — Build 3D shelter geometry
+! ============================================================
+/PREP7
+
+! Element type: SOLID70 (3D thermal brick, 8-node)
+ET,1,SOLID70
+
+! Material 1: default wall (mud brick)
+MP,KXX,1,0.72
+MP,DENS,1,1800
+MP,C,1,840
+
+! ============================================================
+! Strategy: Build shell walls using 4 wall slabs + roof slab
+! Avoids Boolean subtraction issues with Student mesher
+! ============================================================
+
+! South wall (Y=0 face, thickness WTHK in Y direction)
+BLOCK, WTHK, (SLEN+WTHK),  0, WTHK,       0, SHGT
+! North wall (Y=SWID+WTHK face)
+BLOCK, WTHK, (SLEN+WTHK),  (SWID+WTHK), (SWID+2*WTHK),  0, SHGT
+! West wall  (X=0 face)
+BLOCK, 0,    WTHK,          0, (SWID+2*WTHK),  0, SHGT
+! East wall  (X=SLEN+2*WTHK face)
+BLOCK, (SLEN+WTHK), (SLEN+2*WTHK),  0, (SWID+2*WTHK),  0, SHGT
+! Roof slab
+BLOCK, 0, (SLEN+2*WTHK),  0, (SWID+2*WTHK),  SHGT, (SHGT+WTHK)
+! Floor slab
+BLOCK, WTHK, (SLEN+WTHK),  WTHK, (SWID+WTHK),  -WTHK, 0
+
+! Assign all volumes to material 1
+VATT,1,,1
+
+! Mesh — coarse size (Student node limit = 32k)
+ESIZE,0.4
+VMESH,ALL
+
+! ============================================================
+! Compute geometry properties
+! ============================================================
+*SET,WALL_AREA, 2*(SLEN+SWID)*SHGT
+*SET,SOUTH_WALL_AREA, SWID*SHGT
+*SET,ROOF_AREA, SLEN*SWID
+*SET,FLOOR_AREA, SLEN*SWID
+*SET,INT_VOL, SLEN*SWID*SHGT
+
+! Report node count for verification
+*GET,TOTAL_NODES,NODE,,COUNT
+/NOPR
+
+! ============================================================
+! Write geometry properties to CSV file
+! ============================================================
+*CFOPEN,geometry_out,csv,,APPEND
+*CFWRITE,PARAM,VALUE
+*CFWRITE,length_m,%SLEN%
+*CFWRITE,width_m,%SWID%
+*CFWRITE,height_m,%SHGT%
+*CFWRITE,wall_thickness_m,%WTHK%
+*CFWRITE,wall_area_m2,%WALL_AREA%
+*CFWRITE,south_wall_area_m2,%SOUTH_WALL_AREA%
+*CFWRITE,roof_area_m2,%ROOF_AREA%
+*CFWRITE,floor_area_m2,%FLOOR_AREA%
+*CFWRITE,interior_volume_m3,%INT_VOL%
+*CFWRITE,total_nodes,%TOTAL_NODES%
+*CFCLOS
+
+FINISH
+/EOF

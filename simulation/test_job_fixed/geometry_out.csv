@@ -1,0 +1,11 @@
+PARAM,VALUE
+length_m,6
+width_m,4
+height_m,3
+wall_thi,0.45
+wall_are,60
+south_wa,12
+roof_are,24
+floor_ar,24
+interior,72
+total_no,2946

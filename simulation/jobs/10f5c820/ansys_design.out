@@ -1,0 +1,330 @@
+
+ Ansys Mechanical Enterprise Academic Student      
+
+
+ *------------------------------------------------------------------*
+ |                                                                  |
+ |   W E L C O M E   T O   T H E   A N S Y S (R)  P R O G R A M     |
+ |                                                                  |
+ *------------------------------------------------------------------*
+
+
+
+
+ ***************************************************************
+ *         ANSYS MAPDL 2026 R1          LEGAL NOTICES          *
+ ***************************************************************
+ *                                                             *
+ * Copyright (c) 2026 Synopsys, Inc. and ANSYS, Inc.           *
+ * All rights reserved.                                        *
+ * Unauthorized use, distribution or duplication is            *
+ * prohibited.                                                 *
+ *                                                             *
+ * Ansys is a registered trademark of Ansys, Inc. or its       *
+ * subsidiaries in the United States or other countries.       *
+ * See the Ansys, Inc. online documentation or the Ansys, Inc. *
+ * documentation CD or online help for the complete Legal      *
+ * Notice.                                                     *
+ *                                                             *
+ ***************************************************************
+ *                                                             *
+ * THIS ANSYS SOFTWARE PRODUCT AND PROGRAM DOCUMENTATION       *
+ * INCLUDE TRADE SECRETS AND CONFIDENTIAL AND PROPRIETARY      *
+ * PRODUCTS OF ANSYS, INC., ITS SUBSIDIARIES, OR LICENSORS.    *
+ * The software products and documentation are furnished by    *
+ * Ansys, Inc. or its subsidiaries under a software license    *
+ * agreement that contains provisions concerning               *
+ * non-disclosure, copying, length and nature of use,          *
+ * compliance with exporting laws, warranties, disclaimers,    *
+ * limitations of liability, and remedies, and other           *
+ * provisions.  The software products and documentation may be *
+ * used, disclosed, transferred, or copied only in accordance  *
+ * with the terms and conditions of that software license      *
+ * agreement.                                                  *
+ *                                                             *
+ * Ansys, Inc. is a UL registered                              *
+ * ISO 9001:2015 company.                                      *
+ *                                                             *
+ ***************************************************************
+ *                                                             *
+ * This product is subject to U.S. laws governing export and   *
+ * re-export.                                                  *
+ *                                                             *
+ * For U.S. Government users, except as specifically granted   *
+ * by the Ansys, Inc. software license agreement, the use,     *
+ * duplication, or disclosure by the United States Government  *
+ * is subject to restrictions stated in the Ansys, Inc.        *
+ * software license agreement and FAR 12.212 (for non-DOD      *
+ * licenses).                                                  *
+ *                                                             *
+ ***************************************************************
+
+ 2026 R1 
+     
+ Point Releases and Patches installed:   
+     
+ Ansys, Inc. License Manager 2026 R1 
+ Discovery (full install) 2026 R1
+ Core WB Files 2026 R1   
+ optiSLang Core UI 2026 R1   
+ CFX (includes CFD-Post) 2026 R1 
+ Chemkin 2026 R1 
+ EnSight 2026 R1 
+ FENSAP-ICE 2026 R1  
+ Fluent (includes CFD-Post) 2026 R1  
+ Polyflow (includes CFD-Post) 2026 R1
+ Forte (includes EnSight) 2026 R1
+ Rocky 2026 R1   
+ TurboGrid 2026 R1   
+ ACIS Geometry Interface 2026 R1 
+ AutoCAD Geometry Interface 2026 R1  
+ Catia, Version 4 Geometry Interface 2026 R1 
+ Catia, Version 5 Geometry Interface 2026 R1 
+ Catia, Version 6 Geometry Interface 2026 R1 
+ Creo Elements/Direct Modeling Geometry Interface 2026 R1
+ Creo Parametric Geometry Interface 2026 R1  
+ Inventor Geometry Interface 2026 R1 
+ JTOpen Geometry Interface 2026 R1   
+ NX Geometry Interface 2026 R1   
+ Parasolid Geometry Interface  2026 R1   
+ Solid Edge Geometry Interface 2026 R1   
+ SOLIDWORKS Geometry Interface 2026 R1   
+ Speos 2026 R1   
+ SpaceClaim 2026 R1  
+ Speos RPC 2026 R1   
+ Zemax OpticStudio 2026 R1   
+ Dynamic Reporting 2026 R1   
+ Aqwa 2026 R1
+ Autodyn 2026 R1 
+ Material Calibration App 2026 R1
+ Mechanical Products 2026 R1 
+ Motion 2026 R1  
+ Academic Student 2026 R1
+
+
+          *****  MAPDL COMMAND LINE ARGUMENTS  *****
+  BATCH MODE REQUESTED (-b)    = LIST
+  INPUT FILE COPY MODE (-c)    = COPY
+       1 PARALLEL PROCESSES REQUESTED WITH SINGLE THREAD PER PROCESS
+    TOTAL OF     1 CORES REQUESTED
+  INPUT FILE NAME              = d:\SIH\simulation\jobs\10f5c820\run_design.apdl
+  OUTPUT FILE NAME             = d:\SIH\simulation\jobs\10f5c820\ansys_design.out
+  MEMORY REQUESTED (MB)        = 1024        
+  INITIAL DIRECTORY = d:\SIH\simulation\jobs\10f5c820
+
+ RELEASE= 2026 R1              BUILD= 26.1      UP20260202   VERSION=WINDOWS x64 
+ CURRENT JOBNAME=file  19:13:26  AUG 25, 2026  Elapsed Time=       0.094
+
+     1  /BATCH  
+     2  *SET,SLEN,9.0   
+     3  *SET,SWID,9.5   
+     4  *SET,SHGT,3.7   
+     5  *SET,WTHK,0.3   
+     6  /INPUT,shelter_design,apdl  
+
+ RUN SETUP PROCEDURE FROM FILE= D:\ANSYS Inc\ANSYS Student\v261\Ansys\apdl\start.ans
+
+ /INPUT FILE= D:\ANSYS Inc\ANSYS Student\v261\Ansys\apdl\start.ans  LINE=       0
+
+ PARAMETER SLEN =     9.000000000    
+
+ PARAMETER SWID =     9.500000000    
+
+ PARAMETER SHGT =     3.700000000    
+
+ PARAMETER WTHK =    0.3000000000    
+
+ /INPUT FILE= shelter_design.apdl  LINE=       0
+
+ TITLE= 
+  Ladakh Passive Shelter - 3D Geometry Design                                  
+
+
+ PARAMETER SLEN =     6.000000000    
+
+ PARAMETER SWID =     4.000000000    
+
+ PARAMETER SHGT =     3.000000000    
+
+ PARAMETER WTHK =    0.4500000000    
+
+ *** MAPDL - ENGINEERING ANALYSIS SYSTEM  RELEASE 2026 R1          26.1     ***
+ Ansys Mechanical Enterprise Academic Student      
+ 01055371  VERSION=WINDOWS x64   19:13:26  AUG 25, 2026 Elapsed Time=      5.718
+
+  Ladakh Passive Shelter - 3D Geometry Design                                  
+
+
+
+          ***** MAPDL ANALYSIS DEFINITION (PREP7) *****
+
+ ELEMENT TYPE          1 IS SOLID70      3-D THERMAL SOLID           
+  KEYOPT( 1- 6)=        0      0      0        0      0      0
+  KEYOPT( 7-12)=        0      0      0        0      0      0
+  KEYOPT(13-18)=        0      0      0        0      0      0
+
+ CURRENT NODAL DOF SET IS  TEMP
+  THREE-DIMENSIONAL MODEL
+
+ MATERIAL          1     KXX  =  0.7200000      
+
+ MATERIAL          1     DENS =   1800.000      
+
+ MATERIAL          1     C    =   840.0000      
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM     0.4500000000     TO      6.450000000    
+ Y-DISTANCES FROM      0.000000000     TO     0.4500000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     1
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM     0.4500000000     TO      6.450000000    
+ Y-DISTANCES FROM      4.450000000     TO      4.900000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     2
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM      0.000000000     TO     0.4500000000    
+ Y-DISTANCES FROM      0.000000000     TO      4.900000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     3
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM      6.450000000     TO      6.900000000    
+ Y-DISTANCES FROM      0.000000000     TO      4.900000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     4
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM      0.000000000     TO      6.900000000    
+ Y-DISTANCES FROM      0.000000000     TO      4.900000000    
+ Z-DISTANCES FROM      3.000000000     TO      3.450000000    
+
+      OUTPUT VOLUME =     5
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM     0.4500000000     TO      6.450000000    
+ Y-DISTANCES FROM     0.4500000000     TO      4.450000000    
+ Z-DISTANCES FROM    -0.4500000000     TO      0.000000000    
+
+      OUTPUT VOLUME =     6
+
+ SET ATTRIBUTES FOR ALL SELECTED VOLUMES
+      MAT =    1   REAL =       0   TYPE =    1   ESYS =    0   SECT =    0
+
+ ATTRIBUTES SET FOR      6 VOLUMES (OUT OF      6 SELECTED)
+
+ DEFAULT ELEMENT DIVISIONS PER LINE BASED ON ELEMENT SIZE =  0.400    
+
+ GENERATE NODES AND ELEMENTS   IN  ALL  SELECTED VOLUMES  
+
+ NUMBER OF VOLUMES MESHED   =         6
+ MAXIMUM NODE NUMBER        =      2946
+ MAXIMUM ELEMENT NUMBER     =      1664
+
+ PARAMETER WALL_AREA =     60.00000000    
+
+ PARAMETER SOUTH_WALL_AREA =     12.00000000    
+
+ PARAMETER ROOF_AREA =     24.00000000    
+
+ PARAMETER FLOOR_AREA =     24.00000000    
+
+ PARAMETER INT_VOL =     72.00000000    
+
+ *GET  TOTAL_NODES  FROM  NODE  ITEM=COUN       VALUE=  2946.00000     
+
+
+ ***** ROUTINE COMPLETED *****  ELAPSED TIME =         5.750
+
+
+
+ ***** END OF INPUT ENCOUNTERED *****
+
+ PURGE ALL SOLUTION AND POST DATA
+ SAVE ALL MODEL DATA
+
+ ALL CURRENT MAPDL DATA WRITTEN TO FILE NAME= file.db
+  FOR POSSIBLE RESUME FROM THIS POINT
+
+
+ NUMBER OF WARNING MESSAGES ENCOUNTERED=          0
+ NUMBER OF ERROR   MESSAGES ENCOUNTERED=          0
+
++--------------------- M A P D L   S T A T I S T I C S ------------------------+
+
+Release: 2026 R1            Build: 26.1       Update: UP20260202   Platform: WINDOWS x64 
+Date Run: 08/25/2026   Time: 19:13     Process ID: 4420
+Operating System: Windows 11  (Build: 26100)
+
+Processor Model: AMD Ryzen 7 7445HS w/ Radeon 740M Graphics
+
+Compiler: Intel(R) Fortran Compiler Classic Version 2021.9  (Build: 20230302)
+          Intel(R) C/C++ Compiler Classic Version 2021.9  (Build: 20230302)
+          AOCL-BLAS 5.1.1 Build 20251008
+          Intel(R) oneAPI Math Kernel Library Version 2024.2.3-Product Build 20250403
+
+Number of machines requested            :    1
+Total number of cores available         :   12
+Number of physical cores available      :    6
+Number of processes requested           :    1
+Number of threads per process requested :    1
+Total number of cores requested         :    1 (Shared Memory Parallel)                    
+
+GPU Acceleration: Not Requested
+
+Job Name: file
+Input File: d:\SIH\simulation\jobs\10f5c820\run_design.apdl
+Working Directory: d:\SIH\simulation\jobs\10f5c820
+
+Total CPU time for main thread                    :        0.5 seconds
+Total CPU time summed for all threads             :        0.3 seconds
+
+Elapsed time spent obtaining a license            :        1.2 seconds
+Elapsed time spent pre-processing model (/PREP7)  :        0.0 seconds
+Elapsed time spent solution - preprocessing       :        0.0 seconds
+Elapsed time spent computing solution             :        0.0 seconds
+   Elapsed time in element formation & assembly   :        0.0 seconds
+   Elapsed time in equation solver                :        0.0 seconds
+   Elapsed time in element result calculations    :        0.0 seconds
+Elapsed time spent solution - postprocessing      :        0.0 seconds
+Elapsed time spent post-processing model (/POST1) :        0.0 seconds
+ 
+
+Sum of disk space used on all processes           :        1.4 MB
+
+Sum of memory used on all processes               :       13.0 MB
+Sum of memory allocated on all processes          :     1344.0 MB
+Physical memory available                         :         15 GB
+Total amount of I/O written to disk               :        0.0 GB
+Total amount of I/O read from disk                :        0.0 GB
+
++------------------ E N D   M A P D L   S T A T I S T I C S -------------------+
+
+
+ *-----------------------------------------------------------------------------*
+ |                                                                             |
+ |                               RUN COMPLETED                                 |
+ |                                                                             |
+ |-----------------------------------------------------------------------------|
+ |                                                                             |
+ |  Ansys MAPDL 2026 R1         Build 26.1         UP20260202    WINDOWS x64   |
+ |                                                                             |
+ |-----------------------------------------------------------------------------|
+ |                                                                             |
+ |  Database Requested(-db)     1024 MB     Scratch Memory Requested     64 MB |
+ |  Max Database Used(Master)      4 MB     Max Scratch Used(Master)      9 MB |
+ |  Max Database Used(Workers)     0 MB     Max Scratch Used(Workers)     0 MB |
+ |  Sum Database Used(All)         4 MB     Sum Scratch Used(All)         9 MB |
+ |                                                                             |
+ |-----------------------------------------------------------------------------|
+ |                                                                             |
+ |        CP Time      (sec) =          0.297       Time  =  19:13:36          |
+ |        Elapsed Time (sec) =         15.946       Date  =  08/25/2026        |
+ |                                                                             |
+ *-----------------------------------------------------------------------------*

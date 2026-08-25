@@ -1,0 +1,148 @@
+FINISH
+/CLEAR,NOSTART
+/TITLE, Ladakh Passive Shelter - 3D House Model
+*SET,SLEN,6.0
+*SET,SWID,4.0
+*SET,SHGT,3.0
+*SET,WTHK,0.40
+
+/PREP7
+ET,1,SOLID70
+
+! --- Materials ---
+! Mat 1: Mud Brick Walls
+MP,KXX,1,0.72
+MP,DENS,1,1800
+MP,C,1,840
+
+! Mat 2: Timber Roof & Overhang
+MP,KXX,2,0.15
+MP,DENS,2,650
+MP,C,2,1200
+
+! Mat 3: Stone Foundation Plinth
+MP,KXX,3,1.8
+MP,DENS,3,2400
+MP,C,3,900
+
+! Mat 4: Window Glazing
+MP,KXX,4,1.0
+MP,DENS,4,2500
+MP,C,4,750
+
+! Mat 5: Timber Entrance Door
+MP,KXX,5,0.15
+MP,DENS,5,650
+MP,C,5,1200
+
+! ============================================================
+! 1. Foundation Plinth (Base)
+! ============================================================
+TYPE,1 $ MAT,3
+BLOCK, 0, (SLEN+2*WTHK),  0, (SWID+2*WTHK),  -0.3, 0
+
+! ============================================================
+! 2. Back (North) Wall & Side (East/West) Walls
+! ============================================================
+TYPE,1 $ MAT,1
+! North Wall (Solid)
+BLOCK, WTHK, (SLEN+WTHK),  (SWID+WTHK), (SWID+2*WTHK),  0, SHGT
+! West Wall (Solid)
+BLOCK, 0,    WTHK,          0, (SWID+2*WTHK),  0, SHGT
+! East Wall (Solid)
+BLOCK, (SLEN+WTHK), (SLEN+2*WTHK),  0, (SWID+2*WTHK),  0, SHGT
+
+! ============================================================
+! 3. Front (South) Wall with Door and 2 Windows
+! ============================================================
+! Door dimensions: Width=0.9m, Height=2.1m at X = WTHK+0.5 to WTHK+1.4
+*SET,DX1, WTHK + 0.5
+*SET,DX2, WTHK + 1.4
+*SET,DH,  2.1
+
+! Window 1 dimensions: X = WTHK+2.0 to WTHK+3.4, Z = 0.9 to 2.1
+*SET,W1X1, WTHK + 2.0
+*SET,W1X2, WTHK + 3.4
+! Window 2 dimensions: X = WTHK+4.0 to WTHK+5.4, Z = 0.9 to 2.1
+*SET,W2X1, WTHK + 4.0
+*SET,W2X2, WTHK + 5.4
+*SET,WSILL, 0.9
+*SET,WTOP,  2.1
+
+TYPE,1 $ MAT,1
+! South wall: Left corner pillar (X: WTHK to DX1)
+BLOCK, WTHK, DX1,  0, WTHK,  0, SHGT
+
+! South wall: Pillar between Door and Window 1 (X: DX2 to W1X1)
+BLOCK, DX2, W1X1,  0, WTHK,  0, SHGT
+
+! South wall: Window 1 Sill Wall (X: W1X1 to W1X2, Z: 0 to WSILL)
+BLOCK, W1X1, W1X2,  0, WTHK,  0, WSILL
+
+! South wall: Middle Pillar between Window 1 & 2 (X: W1X2 to W2X1)
+BLOCK, W1X2, W2X1,  0, WTHK,  0, SHGT
+
+! South wall: Window 2 Sill Wall (X: W2X1 to W2X2, Z: 0 to WSILL)
+BLOCK, W2X1, W2X2,  0, WTHK,  0, WSILL
+
+! South wall: Right corner pillar (X: W2X2 to SLEN+WTHK)
+BLOCK, W2X2, (SLEN+WTHK),  0, WTHK,  0, SHGT
+
+! South wall: Lintel Beam above Door and Windows (X: WTHK to SLEN+WTHK, Z: WTOP to SHGT)
+BLOCK, WTHK, (SLEN+WTHK),  0, WTHK,  WTOP, SHGT
+
+! ============================================================
+! 4. Openings: Windows (Mat 4 - Glass) & Door (Mat 5 - Wood)
+! ============================================================
+! Window 1 Glass
+TYPE,1 $ MAT,4
+BLOCK, W1X1, W1X2,  (WTHK*0.35), (WTHK*0.65),  WSILL, WTOP
+
+! Window 2 Glass
+TYPE,1 $ MAT,4
+BLOCK, W2X1, W2X2,  (WTHK*0.35), (WTHK*0.65),  WSILL, WTOP
+
+! Entrance Door (Wood Panel)
+TYPE,1 $ MAT,5
+BLOCK, DX1, DX2,  (WTHK*0.25), (WTHK*0.75),  0, DH
+
+! ============================================================
+! 5. Roof with Overhang & Parapet Fascia (Mat 2)
+! ============================================================
+TYPE,1 $ MAT,2
+! Main Roof Slab with 0.25m Eaves Overhang
+BLOCK, -0.25, (SLEN+2*WTHK+0.25),  -0.25, (SWID+2*WTHK+0.25),  SHGT, (SHGT+0.35)
+
+! ============================================================
+! Mesh all volumes
+! ============================================================
+ESIZE,0.45
+VMESH,ALL
+
+ALLSEL,ALL
+/VIEW,1,1,1,1
+/ANG,1
+/AUTO,1
+/PLOPTS,INFO,1
+/PLOPTS,FRAME,0
+/PNUM,MAT,1
+/NUM,1
+
+! Realistic Material Colors in ANSYS
+/COLOR,MAT,ORAN,1   ! Walls = Adobe Ochre / Mud Brick
+/COLOR,MAT,RED,2    ! Roof = Terracotta / Timber
+/COLOR,MAT,DGRA,3   ! Plinth = Dark Stone
+/COLOR,MAT,CYAN,4   ! Windows = Cyan Glass
+/COLOR,MAT,MAGE,5   ! Door = Timber Brown
+
+/FACET,FINE
+/SHOW,PNG,,0
+PNGR,COMP,1
+PNGR,ORIENT,HORIZ
+/GFILE,1200
+VPLOT
+EPLOT
+/SHOW,CLOSE
+
+SAVE,shelter_3d,db,,ALL
+FINISH

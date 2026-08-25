@@ -1,0 +1,166 @@
+/TITLE, Ladakh Passive Shelter - 3D Geometry Design
+
+! --- Default parameters (overridden by params.apdl) ---
+*SET,SLEN,6.0
+*SET,SWID,4.0
+*SET,SHGT,3.0
+*SET,WTHK,0.45
+
+! ============================================================
+! PREPROCESSOR — Build 3D shelter geometry
+! ============================================================
+/PREP7
+
+! Element type: SOLID70 (3D thermal brick, 8-node)
+ET,1,SOLID70
+
+! --- Materials ---
+! Mat 1: Mud Brick / Adobe Walls
+MP,KXX,1,0.72 $ MP,DENS,1,1800 $ MP,C,1,840
+! Mat 2: Roof & Timber Overhang
+MP,KXX,2,0.15 $ MP,DENS,2,650  $ MP,C,2,1200
+! Mat 3: Stone Foundation Plinth
+MP,KXX,3,1.80 $ MP,DENS,3,2400 $ MP,C,3,900
+! Mat 4: Window Glazing (Glass)
+MP,KXX,4,1.00 $ MP,DENS,4,2500 $ MP,C,4,750
+! Mat 5: Entrance Door (Wood)
+MP,KXX,5,0.15 $ MP,DENS,5,650  $ MP,C,5,1200
+
+! ============================================================
+! 1. Foundation Plinth (Base Slab - Mat 3)
+! ============================================================
+TYPE,1 $ MAT,3
+BLOCK, 0, (SLEN+2*WTHK),  0, (SWID+2*WTHK),  -0.3, 0
+
+! ============================================================
+! 2. Back (North) Wall & Side (East/West) Walls (Mat 1)
+! ============================================================
+TYPE,1 $ MAT,1
+! North Wall (Solid)
+BLOCK, WTHK, (SLEN+WTHK),  (SWID+WTHK), (SWID+2*WTHK),  0, SHGT
+! West Wall (Solid)
+BLOCK, 0,    WTHK,          0, (SWID+2*WTHK),  0, SHGT
+! East Wall (Solid)
+BLOCK, (SLEN+WTHK), (SLEN+2*WTHK),  0, (SWID+2*WTHK),  0, SHGT
+
+! ============================================================
+! 3. Front (South) Wall with Door and 2 Windows (Mat 1)
+! ============================================================
+! Door coordinates
+*SET,DX1, WTHK + 0.5
+*SET,DX2, WTHK + 1.4
+*SET,DH,  2.1
+
+! Window coordinates
+*SET,W1X1, WTHK + 2.0
+*SET,W1X2, WTHK + 3.4
+*SET,W2X1, WTHK + 4.0
+*SET,W2X2, WTHK + 5.4
+*SET,WSILL, 0.9
+*SET,WTOP,  2.1
+
+TYPE,1 $ MAT,1
+! Left pillar (beside door)
+BLOCK, WTHK, DX1,  0, WTHK,  0, SHGT
+! Pillar between Door and Window 1
+BLOCK, DX2, W1X1,  0, WTHK,  0, SHGT
+! Window 1 Sill Wall
+BLOCK, W1X1, W1X2,  0, WTHK,  0, WSILL
+! Middle Pillar between Windows
+BLOCK, W1X2, W2X1,  0, WTHK,  0, SHGT
+! Window 2 Sill Wall
+BLOCK, W2X1, W2X2,  0, WTHK,  0, WSILL
+! Right corner pillar
+BLOCK, W2X2, (SLEN+WTHK),  0, WTHK,  0, SHGT
+! Lintel Beam above all openings
+BLOCK, WTHK, (SLEN+WTHK),  0, WTHK,  WTOP, SHGT
+
+! ============================================================
+! 4. Openings: Windows (Mat 4 - Glass) & Door (Mat 5 - Wood)
+! ============================================================
+! Window 1 Glazing Pane
+TYPE,1 $ MAT,4
+BLOCK, W1X1, W1X2,  (WTHK*0.35), (WTHK*0.65),  WSILL, WTOP
+
+! Window 2 Glazing Pane
+TYPE,1 $ MAT,4
+BLOCK, W2X1, W2X2,  (WTHK*0.35), (WTHK*0.65),  WSILL, WTOP
+
+! Entrance Door (Wood Panel)
+TYPE,1 $ MAT,5
+BLOCK, DX1, DX2,  (WTHK*0.25), (WTHK*0.75),  0, DH
+
+! ============================================================
+! 5. Roof with Overhang & Parapet (Mat 2)
+! ============================================================
+TYPE,1 $ MAT,2
+BLOCK, -0.25, (SLEN+2*WTHK+0.25),  -0.25, (SWID+2*WTHK+0.25),  SHGT, (SHGT+0.35)
+
+! ============================================================
+! Mesh all volumes
+! ============================================================
+ESIZE,0.45
+VMESH,ALL
+
+! ============================================================
+! Compute geometry properties
+! ============================================================
+*SET,WALL_AREA, 2*(SLEN+SWID)*SHGT
+*SET,SOUTH_WALL_AREA, SWID*SHGT
+*SET,ROOF_AREA, SLEN*SWID
+*SET,FLOOR_AREA, SLEN*SWID
+*SET,INT_VOL, SLEN*SWID*SHGT
+
+! Report node count for verification
+*GET,TOTAL_NODES,NODE,,COUNT
+
+/VIEW,1,1,1,1
+/ANG,1
+/AUTO,1
+/PLOPTS,INFO,1
+/PLOPTS,FRAME,0
+/PNUM,MAT,1
+/NUM,1
+
+! Material Colors:
+/COLOR,MAT,ORAN,1   ! Walls = Adobe Ochre / Mud Brick
+/COLOR,MAT,RED,2    ! Roof = Timber Terracotta
+/COLOR,MAT,DGRA,3   ! Foundation Plinth = Stone Grey
+/COLOR,MAT,CYAN,4   ! Windows = Cyan Glazing
+/COLOR,MAT,MAGE,5   ! Door = Wood Brown
+
+/FACET,FINE
+/SHRINK,0.02
+
+/SHOW,PNG,,0
+PNGR,COMP,1
+PNGR,ORIENT,HORIZ
+/GFILE,1200
+VPLOT
+EPLOT
+/SHOW,CLOSE
+
+! Save full ANSYS database for GUI inspection
+SAVE,shelter_3d,db,,ALL
+
+/NOPR
+
+! ============================================================
+! Write geometry properties to CSV file
+! ============================================================
+*CFOPEN,geometry_out,csv,,APPEND
+*CFWRITE,PARAM,VALUE
+*CFWRITE,length_m,%SLEN%
+*CFWRITE,width_m,%SWID%
+*CFWRITE,height_m,%SHGT%
+*CFWRITE,wall_thickness_m,%WTHK%
+*CFWRITE,wall_area_m2,%WALL_AREA%
+*CFWRITE,south_wall_area_m2,%SOUTH_WALL_AREA%
+*CFWRITE,roof_area_m2,%ROOF_AREA%
+*CFWRITE,floor_area_m2,%FLOOR_AREA%
+*CFWRITE,interior_volume_m3,%INT_VOL%
+*CFWRITE,total_nodes,%TOTAL_NODES%
+*CFCLOS
+
+FINISH
+/EOF

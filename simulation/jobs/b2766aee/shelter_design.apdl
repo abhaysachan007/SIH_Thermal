@@ -1,0 +1,90 @@
+
+! ============================================================
+! shelter_design.apdl
+! Phase 1: Build 3D shelter geometry and extract properties
+! No thermal solve — geometry is passed to FDM
+! Parameters are pre-set via params.apdl before this script runs
+! ============================================================
+
+/BATCH
+/TITLE, Ladakh Passive Shelter - 3D Design
+
+! Default parameters (overridden by params.apdl)
+*SET,SLEN,6.0
+*SET,SWID,4.0
+*SET,SHGT,3.0
+*SET,WTHK,0.45
+
+/PREP7
+
+! --- Element type: SOLID185 (structural brick - for geometry/mesh only) ---
+ET,1,SOLID185
+
+! --- Geometry: Outer shelter box ---
+BLOCK,0,(SLEN + 2*WTHK),  0,(SWID + 2*WTHK),  0,(SHGT + WTHK)
+
+! --- Interior air volume ---
+BLOCK,WTHK,(SLEN + WTHK),  WTHK,(SWID + WTHK),  0,SHGT
+
+! --- Subtract interior from outer to get walls + roof shell ---
+VSBV,1,2,,DELETE,KEEP
+
+! --- Floor slab ---
+BLOCK,WTHK,(SLEN + WTHK),  WTHK,(SWID + WTHK),  -WTHK,0
+
+! --- Mesh (coarse — geometry extraction only) ---
+ESIZE,0.4
+VMESH,ALL
+
+! ============================================================
+! Extract geometry properties and write to output file
+! ============================================================
+! Total exterior area of walls + roof
+ASEL,EXT
+*GET,N_EXT_AREA,AREA,,COUNT
+ALLSEL,ALL
+
+! South wall area (Y = 0 plane, exterior face)
+ASEL,S,LOC,Y,0,0.01
+*GET,N_SOUTH,AREA,,COUNT
+*GET,SOUTH_AREA,AREA,1,AREA
+ALLSEL,ALL
+
+! Internal volume (interior void - approx from dimensions)
+*SET,INT_VOL, SLEN * SWID * SHGT
+
+! Wall total area (4 sides)
+*SET,WALL_AREA, 2*(SLEN + SWID)*SHGT
+
+! Roof area
+*SET,ROOF_AREA, SLEN * SWID
+
+! Floor area
+*SET,FLOOR_AREA, SLEN * SWID
+
+! Write geometry properties to CSV
+*CFOPEN,geometry_out,csv
+*VWRITE,'PARAM','VALUE'
+%C,%C
+*VWRITE,'length_m',SLEN
+%C,%G
+*VWRITE,'width_m',SWID
+%C,%G
+*VWRITE,'height_m',SHGT
+%C,%G
+*VWRITE,'wall_thickness_m',WTHK
+%C,%G
+*VWRITE,'wall_area_m2',WALL_AREA
+%C,%G
+*VWRITE,'roof_area_m2',ROOF_AREA
+%C,%G
+*VWRITE,'floor_area_m2',FLOOR_AREA
+%C,%G
+*VWRITE,'south_wall_area_m2',SOUTH_AREA
+%C,%G
+*VWRITE,'interior_volume_m3',INT_VOL
+%C,%G
+*CFCLOS
+
+FINISH
+/EOF
