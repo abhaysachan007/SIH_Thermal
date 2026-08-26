@@ -449,6 +449,27 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
         amb_temps.append(T_amb)
         h_ext_values.append(h_ext)
 
+    # -- Estimate an interior-air trajectory via the FDM engine --
+    # ANSYS solves 3D conduction through the solid envelope, but there is no
+    # lumped thermal-mass element modeling the interior air itself. Without a
+    # time-varying reference, a constant-T0 convection BC on the interior
+    # faces pins them near T0 for all 24 hours, producing a physically flat
+    # (non-diurnal) interior result. The FDM engine already solves a
+    # validated lumped-capacitance model for the interior air of this same
+    # geometry/materials/climate — reuse its hourly trajectory to drive the
+    # interior convection BC here instead of a frozen constant, so the FEA's
+    # solid conduction responds to a realistic day/night cycle.
+    try:
+        from app.services.fallback_engine import run_fdm_simulation
+        fdm_estimate = run_fdm_simulation(inputs, materials_db, climate_profile)
+        fdm_inside = [p['value'] for p in fdm_estimate.get('inside_temperature_series', [])]
+    except Exception as e:
+        logger.warning(f"FDM interior-air estimate failed ({e}); using constant ambient[0] fallback")
+        fdm_inside = []
+    if not fdm_inside:
+        fdm_inside = amb_temps[:24]
+    int_air_temps = [fdm_inside[ih % len(fdm_inside)] for ih in range(25)]
+
     # -- Apply thermal boundary conditions via APDL commands --
     mapdl.prep7()
 
@@ -458,6 +479,7 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
     mapdl.run("*DIM,QSOLS_TB,TABLE,25,1,1,TIME")
     mapdl.run("*DIM,QSOLR_TB,TABLE,25,1,1,TIME")
     mapdl.run("*DIM,HEXT_TB,TABLE,25,1,1,TIME")
+    mapdl.run("*DIM,TINT_TB,TABLE,25,1,1,TIME")
 
     for ih in range(25):
         row = ih + 1
@@ -470,6 +492,8 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
         mapdl.run(f"QSOLR_TB({row},1,1)={roof_solar[ih]:.2f}")
         mapdl.run(f"HEXT_TB({row},0,1)={t_sec}")
         mapdl.run(f"HEXT_TB({row},1,1)={h_ext_values[ih]:.2f}")
+        mapdl.run(f"TINT_TB({row},0,1)={t_sec}")
+        mapdl.run(f"TINT_TB({row},1,1)={int_air_temps[ih]:.2f}")
 
     T0 = amb_temps[0]
 
@@ -513,7 +537,7 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
     mapdl.nsel("A", "LOC", "Y", W + wthk * 1.4, W + wthk * 1.6)          # North inner
     mapdl.nsel("A", "LOC", "X", wthk * 0.4, wthk * 0.6)                  # West inner
     mapdl.nsel("A", "LOC", "X", L + wthk * 1.4, L + wthk * 1.6)          # East inner
-    mapdl.sf("ALL", "CONV", 4.0, T0)
+    mapdl.sf("ALL", "CONV", 4.0, "%TINT_TB%")
 
     mapdl.allsel()
 
