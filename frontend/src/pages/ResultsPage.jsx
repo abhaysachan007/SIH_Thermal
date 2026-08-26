@@ -454,7 +454,6 @@ export default function ResultsPage() {
                 shelterData={currentInput}
                 ansysData={currentResult}
                 height="480px"
-                allowLaunchGui={true}
               />
             </div>
           );

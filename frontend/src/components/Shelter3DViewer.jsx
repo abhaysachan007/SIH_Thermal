@@ -1,23 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { openAnsysGui } from '../api/simulationApi';
 
 export default function Shelter3DViewer({
   shelterData,
   ansysData,
   showAnsysImages = true,
   height = '460px',
-  allowLaunchGui = true
 }) {
   const mountRef = useRef(null);
   const [wireframe, setWireframe] = useState(false);
   const [showRoof, setShowRoof] = useState(true);
   const [showSun, setShowSun] = useState(true);
-  const [thermalMode, setThermalMode] = useState(true); // Default to Thermal Heat Map Mode!
-  const [roofType, setRoofType] = useState('pitched'); // 'pitched' (Gable) or 'flat'
+  const [thermalMode, setThermalMode] = useState(true);
+  const [roofType, setRoofType] = useState('pitched');
   const [activeAnsysTab, setActiveAnsysTab] = useState('3d_interactive');
-  const [guiStatus, setGuiStatus] = useState(null);
-  const [isLaunching, setIsLaunching] = useState(false);
 
   // Extract dimensions
   const shape = shelterData?.shape || 'rectangular';
@@ -37,6 +33,9 @@ export default function Shelter3DViewer({
   const maxInsideTemp = parseFloat(ansysData?.peak_inside_temp_C || ansysData?.result?.peak_inside_temp_C || 24.2);
   const minInsideTemp = parseFloat(ansysData?.min_inside_temp_C || ansysData?.result?.min_inside_temp_C || 3.1);
   const avgTemp = parseFloat(ansysData?.avg_inside_temp_C || ansysData?.result?.avg_inside_temp_C || 14.5);
+
+  // Surface temperatures from ANSYS FEA (if available)
+  const surfTemps = ansysData?.surface_temperatures || ansysData?.result?.surface_temperatures || null;
 
   // Parse and expand all openings dynamically
   const rawOpenings = shelterData?.openings || [];
@@ -175,19 +174,35 @@ export default function Shelter3DViewer({
     else if (wallMatId.includes('composite') || wallMatId.includes('eps')) baseArchWallColor = 0xded5c7;
     else if (wallMatId.includes('concrete')) baseArchWallColor = 0x8a8f96;
 
-    // Helper: interpolate between Cold Cyan/Blue (#06b6d4), Moderate Green (#84cc16), Warm Amber (#f59e0b), and Hot Red (#ef4444)
-    const getThermalColor = (solarExp) => {
-      if (solarExp > 0.65) return 0xf59e0b; // Bright Amber/Hot
-      if (solarExp > 0.30) return 0x84cc16; // Moderate Green/Yellow
-      return 0x06b6d4; // Cold Blue/Cyan
+    // FLIR thermal color mapping: maps temperature to infrared spectrum
+    // Uses real ANSYS surface temperatures when available, falls back to solar exposure
+    const surfTemps = ansysData?.surface_temperatures || ansysData?.result?.surface_temperatures || null;
+    const getThermalColorFromTemp = (tempC) => {
+      // Map temperature range to FLIR color spectrum
+      const tMin = minInsideTemp - 5;
+      const tMax = maxInsideTemp + 5;
+      const norm = Math.max(0, Math.min(1, (tempC - tMin) / Math.max(1, tMax - tMin)));
+      if (norm > 0.85) return 0xef4444; // Hot Red
+      if (norm > 0.65) return 0xf59e0b; // Warm Amber
+      if (norm > 0.45) return 0xeab308; // Yellow
+      if (norm > 0.25) return 0x84cc16; // Moderate Green
+      if (norm > 0.10) return 0x06b6d4; // Cool Cyan
+      return 0x1d4ed8; // Cold Blue
     };
 
-    const southWallColor = thermalMode ? getThermalColor(dotSouth) : baseArchWallColor;
-    const northWallColor = thermalMode ? getThermalColor(dotNorth) : baseArchWallColor;
-    const eastWallColor  = thermalMode ? getThermalColor(dotEast)  : baseArchWallColor;
-    const westWallColor  = thermalMode ? getThermalColor(dotWest)  : baseArchWallColor;
+    const getThermalColor = (solarExp, surfaceTempC) => {
+      if (surfaceTempC != null) return getThermalColorFromTemp(surfaceTempC);
+      if (solarExp > 0.65) return 0xf59e0b;
+      if (solarExp > 0.30) return 0x84cc16;
+      return 0x06b6d4;
+    };
 
-    const roofColor   = thermalMode ? (dotSouth > 0.3 ? 0xeab308 : 0x84cc16) : 0x8b4513;
+    const southWallColor = thermalMode ? getThermalColor(dotSouth, surfTemps?.south_wall_inner_C) : baseArchWallColor;
+    const northWallColor = thermalMode ? getThermalColor(dotNorth, surfTemps?.north_wall_inner_C) : baseArchWallColor;
+    const eastWallColor  = thermalMode ? getThermalColor(dotEast, surfTemps?.east_wall_inner_C)  : baseArchWallColor;
+    const westWallColor  = thermalMode ? getThermalColor(dotWest, surfTemps?.west_wall_inner_C)  : baseArchWallColor;
+
+    const roofColor   = thermalMode ? getThermalColor(dotSouth > 0.3 ? 0.7 : 0.2, surfTemps?.roof_inner_C) : 0x8b4513;
     const plinthColor = thermalMode ? 0x1d4ed8 : 0x475569;
     const glassColor  = thermalMode ? (dotSouth > 0.4 ? 0xef4444 : 0x38bdf8) : 0x60a5fa;
     const doorColor   = thermalMode ? 0xd97706 : 0x5c3a21;
@@ -721,21 +736,7 @@ export default function Shelter3DViewer({
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
     };
-  }, [shape, length, width, height_m, wallThk, orientationDeg, sunAngle, wireframe, showRoof, showSun, thermalMode, roofType, rawOpenings, maxInsideTemp, minInsideTemp]);
-
-  const handleOpenGui = async () => {
-    setIsLaunching(true);
-    setGuiStatus(null);
-    try {
-      const activeJobId = jobId || 'preview_job';
-      const res = await openAnsysGui(activeJobId, shelterData);
-      setGuiStatus({ success: res.message || 'ANSYS MAPDL GUI window launched on your screen!' });
-    } catch (err) {
-      setGuiStatus({ error: err.response?.data?.detail || err.message || 'Failed to open ANSYS GUI' });
-    } finally {
-      setIsLaunching(false);
-    }
-  };
+  }, [shape, length, width, height_m, wallThk, orientationDeg, sunAngle, wireframe, showRoof, showSun, thermalMode, roofType, rawOpenings, maxInsideTemp, minInsideTemp, ansysData]);
 
   return (    <div className="rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden shadow-lg">
       {/* CAD Viewport Header */}
@@ -744,6 +745,13 @@ export default function Shelter3DViewer({
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="font-mono font-bold text-slate-200 uppercase tracking-wider text-[11px]">
             WebGL 3D Engine · {shape === 'dome' ? 'Igloo Hemisphere CAD' : 'Alpine Gable Shelter CAD'}
+            {ansysData?.engine_used && (
+              <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] ${
+                ansysData.engine_used.includes('ansys') ? 'bg-emerald-900 text-emerald-300' : 'bg-sky-900 text-sky-300'
+              }`}>
+                {ansysData.engine_used.includes('ansys') ? 'ANSYS FEA' : 'Python FDM'}
+              </span>
+            )}
           </span>
         </div>
 
@@ -791,33 +799,8 @@ export default function Shelter3DViewer({
             </div>
           )}
 
-          {allowLaunchGui && (
-            <button
-              type="button"
-              onClick={handleOpenGui}
-              disabled={isLaunching}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 disabled:opacity-50 text-slate-200 hover:text-white rounded-lg text-xs font-mono font-medium shadow-sm flex items-center gap-2 transition-all"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>{isLaunching ? 'Launching MAPDL…' : 'Open in ANSYS GUI'}</span>
-            </button>
-          )}
         </div>
       </div>
-
-      {/* GUI Status Alert */}
-      {guiStatus && (
-        <div className={`px-4 py-2.5 text-xs font-mono border-b ${
-          guiStatus.success
-            ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
-            : 'bg-rose-950/80 text-rose-300 border-rose-800'
-        }`}>
-          <div className="flex items-center gap-2">
-            <span className="font-bold">{guiStatus.success ? '✓' : '⚠️'}</span>
-            <span>{guiStatus.success || guiStatus.error}</span>
-          </div>
-        </div>
-      )}
 
       {/* Main Viewport Area */}
       <div className="relative bg-slate-950">
@@ -928,7 +911,7 @@ export default function Shelter3DViewer({
               )}
             </div>
 
-            {/* FLIR Infrared Thermal Temperature Scale Bar (Right) */}
+            {/* FLIR Infrared Thermal Temperature Scale Bar with Surface Readings */}
             {thermalMode && (
               <div className="absolute top-3 right-3 bg-slate-900/90 backdrop-blur-md rounded-xl p-2.5 border border-slate-700 shadow-2xl flex flex-col items-center text-white text-[11px] font-mono select-none">
                 <span className="font-bold text-rose-400 mb-1">+{maxInsideTemp.toFixed(1)}°C</span>
@@ -940,7 +923,31 @@ export default function Shelter3DViewer({
                   }}
                 />
                 <span className="font-bold text-sky-400 mt-1">{minInsideTemp.toFixed(1)}°C</span>
-                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">FLIR IR</span>
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                  {surfTemps ? 'ANSYS FEA' : 'FLIR IR'}
+                </span>
+                {surfTemps && (
+                  <div className="mt-2 pt-2 border-t border-slate-700 space-y-1 text-[9px] w-full">
+                    {surfTemps.south_wall_inner_C != null && (
+                      <div className="flex justify-between gap-2"><span className="text-slate-400">S Wall:</span><span className="text-amber-300">{surfTemps.south_wall_inner_C.toFixed(1)}°</span></div>
+                    )}
+                    {surfTemps.north_wall_inner_C != null && (
+                      <div className="flex justify-between gap-2"><span className="text-slate-400">N Wall:</span><span className="text-sky-300">{surfTemps.north_wall_inner_C.toFixed(1)}°</span></div>
+                    )}
+                    {surfTemps.east_wall_inner_C != null && (
+                      <div className="flex justify-between gap-2"><span className="text-slate-400">E Wall:</span><span className="text-slate-200">{surfTemps.east_wall_inner_C.toFixed(1)}°</span></div>
+                    )}
+                    {surfTemps.west_wall_inner_C != null && (
+                      <div className="flex justify-between gap-2"><span className="text-slate-400">W Wall:</span><span className="text-slate-200">{surfTemps.west_wall_inner_C.toFixed(1)}°</span></div>
+                    )}
+                    {surfTemps.roof_inner_C != null && (
+                      <div className="flex justify-between gap-2"><span className="text-slate-400">Roof:</span><span className="text-slate-200">{surfTemps.roof_inner_C.toFixed(1)}°</span></div>
+                    )}
+                    {surfTemps.floor_surface_C != null && (
+                      <div className="flex justify-between gap-2"><span className="text-slate-400">Floor:</span><span className="text-emerald-300">{surfTemps.floor_surface_C.toFixed(1)}°</span></div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

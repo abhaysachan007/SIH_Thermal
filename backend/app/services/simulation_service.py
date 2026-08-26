@@ -62,15 +62,22 @@ def scale_climate_profile(profile: dict, min_amb: Optional[float] = None, max_am
 
 
 def _select_and_run(shelter_input, materials_db, climate_profile):
-    """Route to ANSYS or FDM engine based on the engine field."""
+    """Route to ANSYS PyMAPDL or Python FDM engine based on the engine field."""
     engine = getattr(shelter_input, 'engine', 'auto')
+    if engine == 'fdm':
+        result = run_fdm_simulation(shelter_input, materials_db, climate_profile)
+        result['engine_used'] = 'python_fdm'
+        return result
     if engine == 'ansys' or engine == 'auto':
         try:
             from app.services.ansys_engine import run_ansys_simulation
             return run_ansys_simulation(shelter_input, materials_db, climate_profile)
-        except Exception:
-            pass  # FDM fallback below
-    return run_fdm_simulation(shelter_input, materials_db, climate_profile)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"ANSYS engine failed ({e}), using Python FDM")
+    result = run_fdm_simulation(shelter_input, materials_db, climate_profile)
+    result['engine_used'] = 'python_fdm'
+    return result
 
 DATA_DIR = Path(__file__).parent.parent / 'data'
 

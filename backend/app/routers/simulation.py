@@ -36,28 +36,6 @@ async def get_compare_result(job_id: str):
         raise HTTPException(status_code=404, detail=f'Comparison job not found: {job_id}')
     return job
 
-@router.post('/jobs/{job_id}/open-ansys')
-async def trigger_open_ansys_gui(job_id: str, payload: dict = None):
-    """Launch native ANSYS MAPDL GUI on the desktop with the 3D model."""
-    try:
-        from app.services.ansys_engine import open_ansys_gui
-        svc = get_simulation_service()
-        job_data = svc.jobs.get(job_id, {})
-        shelter_input = job_data.get("input")
-        if shelter_input is None and payload:
-            class DummyInput:
-                pass
-            shelter_input = DummyInput()
-            for k, v in payload.items():
-                setattr(shelter_input, k, v)
-
-        res = open_ansys_gui(job_id, shelter_input, svc.materials_db)
-        if not res.get("success"):
-            raise HTTPException(status_code=400, detail=res.get("error", "Failed to launch ANSYS"))
-        return res
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @router.post("/optimize")
 async def optimize_shelter(payload: dict):
     """
