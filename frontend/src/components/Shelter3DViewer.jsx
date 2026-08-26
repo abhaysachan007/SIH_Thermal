@@ -4,7 +4,6 @@ import * as THREE from 'three';
 export default function Shelter3DViewer({
   shelterData,
   ansysData,
-  showAnsysImages = true,
   height = '460px',
 }) {
   const mountRef = useRef(null);
@@ -13,7 +12,6 @@ export default function Shelter3DViewer({
   const [showSun, setShowSun] = useState(true);
   const [thermalMode, setThermalMode] = useState(true);
   const [roofType, setRoofType] = useState('pitched');
-  const [activeAnsysTab, setActiveAnsysTab] = useState('3d_interactive');
 
   // Extract dimensions
   const shape = shelterData?.shape || 'rectangular';
@@ -84,11 +82,6 @@ export default function Shelter3DViewer({
   };
 
   const wallLayouts = allocateWallOpenings(totalDoors, totalWindows);
-
-  const volumesImg = ansysData?.ansys_3d_volumes_image;
-  const meshImg = ansysData?.ansys_3d_mesh_image;
-  const jobId = ansysData?.ansys_job_id || ansysData?.job_id;
-  const hasAnsysImages = Boolean(volumesImg || meshImg);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -755,58 +748,12 @@ export default function Shelter3DViewer({
           </span>
         </div>
 
-        {/* View Selection & ANSYS Launch Controls */}
-        <div className="flex flex-wrap items-center gap-2">
-          {hasAnsysImages && (
-            <div className="flex rounded-lg overflow-hidden border border-slate-700 bg-slate-800 p-0.5 font-mono text-[11px]">
-              <button
-                type="button"
-                onClick={() => setActiveAnsysTab('3d_interactive')}
-                className={`px-2.5 py-1 rounded font-medium transition-all ${
-                  activeAnsysTab === '3d_interactive'
-                    ? 'bg-sky-600 text-white shadow-sm font-semibold'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Interactive 3D
-              </button>
-              {volumesImg && (
-                <button
-                  type="button"
-                  onClick={() => setActiveAnsysTab('ansys_volumes')}
-                  className={`px-2.5 py-1 rounded font-medium transition-all ${
-                    activeAnsysTab === 'ansys_volumes'
-                      ? 'bg-sky-600 text-white shadow-sm font-semibold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  ANSYS VPLOT
-                </button>
-              )}
-              {meshImg && (
-                <button
-                  type="button"
-                  onClick={() => setActiveAnsysTab('ansys_mesh')}
-                  className={`px-2.5 py-1 rounded font-medium transition-all ${
-                    activeAnsysTab === 'ansys_mesh'
-                      ? 'bg-sky-600 text-white shadow-sm font-semibold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  ANSYS Mesh
-                </button>
-              )}
-            </div>
-          )}
-
-        </div>
       </div>
 
       {/* Main Viewport Area */}
       <div className="relative bg-slate-950">
-        {/* Interactive 3D WebGL Tab */}
-        {activeAnsysTab === '3d_interactive' && (
-          <div className="relative">
+        {/* Interactive 3D WebGL Viewport — always the user's own design */}
+        <div className="relative">
             <div
               ref={mountRef}
               style={{ width: '100%', height: height }}
@@ -957,35 +904,6 @@ export default function Shelter3DViewer({
               <span>Rotate: Left Click · Pan: Right Click · Zoom: Wheel</span>
             </div>
           </div>
-        )}
-
-        {/* ANSYS Volumes Render Tab */}
-        {activeAnsysTab === 'ansys_volumes' && volumesImg && (
-          <div className="p-6 bg-slate-950 flex flex-col items-center justify-center min-h-[380px]">
-            <img
-              src={volumesImg}
-              alt="ANSYS 3D Volumes Model"
-              className="max-h-[360px] object-contain rounded-xl border border-slate-800 shadow-2xl"
-            />
-            <p className="text-xs font-mono text-slate-400 mt-3">
-              ANSYS MAPDL 3D Solid Model Volume Plot (VPLOT)
-            </p>
-          </div>
-        )}
-
-        {/* ANSYS FEA Mesh Render Tab */}
-        {activeAnsysTab === 'ansys_mesh' && meshImg && (
-          <div className="p-6 bg-slate-950 flex flex-col items-center justify-center min-h-[380px]">
-            <img
-              src={meshImg}
-              alt="ANSYS 3D FEA Mesh"
-              className="max-h-[360px] object-contain rounded-xl border border-slate-800 shadow-2xl"
-            />
-            <p className="text-xs font-mono text-slate-400 mt-3">
-              ANSYS MAPDL 3D Finite Element Mesh (EPLOT)
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Model Spec Engineering Telemetry Bar */}
