@@ -226,6 +226,9 @@ def _build_and_solve_pymapdl(inputs, materials_db: dict, climate_profile: dict, 
         nproc=1,
         override=True,
         loglevel="WARNING",
+        # Fail fast instead of hanging indefinitely if MAPDL can't start
+        # (missing license, blocked local gRPC port, etc.).
+        start_timeout=90,
     )
 
     try:
@@ -762,11 +765,18 @@ def _build_results(
     }
 
 
+ANSYS_HARD_TIMEOUT_S = int(os.environ.get("ANSYS_HARD_TIMEOUT_S", 600))
+
+
 def run_ansys_simulation(inputs, materials_db: dict, climate_profile: dict) -> dict:
     """
     Main entry point: run ANSYS PyMAPDL transient thermal FEA.
-    Falls back to Python FDM if PyMAPDL is unavailable or fails.
+    Falls back to Python FDM if PyMAPDL is unavailable, fails, or exceeds
+    ANSYS_HARD_TIMEOUT_S (default 10 min) — this bounds the case where MAPDL
+    hangs (license negotiation, blocked local gRPC port) instead of erroring,
+    which would otherwise stall the job forever with no visible failure.
     """
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
     from app.services.fallback_engine import run_fdm_simulation
 
     job_id = str(uuid.uuid4())[:8]
@@ -775,8 +785,19 @@ def run_ansys_simulation(inputs, materials_db: dict, climate_profile: dict) -> d
 
     logger.info(f"=== ANSYS PyMAPDL Job {job_id} ===")
 
+    fallback_reason = None
     try:
-        result = _build_and_solve_pymapdl(inputs, materials_db, climate_profile, job_dir)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(
+                _build_and_solve_pymapdl, inputs, materials_db, climate_profile, job_dir
+            )
+            try:
+                result = future.result(timeout=ANSYS_HARD_TIMEOUT_S)
+            except FutureTimeoutError:
+                raise TimeoutError(
+                    f"ANSYS FEA exceeded the {ANSYS_HARD_TIMEOUT_S}s hard timeout "
+                    "(MAPDL likely hung on license negotiation or process launch)"
+                )
         result["job_id"] = job_id
         result["ansys_job_id"] = job_id
         logger.info(
@@ -786,17 +807,23 @@ def run_ansys_simulation(inputs, materials_db: dict, climate_profile: dict) -> d
         return result
 
     except ImportError as e:
-        logger.warning(f"PyMAPDL not available ({e}), falling back to Python FDM")
+        fallback_reason = f"PyMAPDL not available: {e}"
     except FileNotFoundError as e:
-        logger.warning(f"MAPDL executable not found ({e}), falling back to Python FDM")
+        fallback_reason = f"MAPDL executable not found: {e}"
+    except TimeoutError as e:
+        fallback_reason = str(e)
     except Exception as e:
-        logger.warning(f"ANSYS FEA error: {type(e).__name__}: {e}, falling back to Python FDM")
+        fallback_reason = f"{type(e).__name__}: {e}"
 
-    # Fallback to Python FDM
+    logger.warning(f"ANSYS FEA failed ({fallback_reason}), falling back to Python FDM")
+
+    # Fallback to Python FDM — surfaced to the UI via ansys_fallback_reason so
+    # a fallback is never mistaken for a real ANSYS result.
     try:
         result = run_fdm_simulation(inputs, materials_db, climate_profile)
         result["job_id"] = job_id
         result["engine_used"] = "python_fdm_fallback"
+        result["ansys_fallback_reason"] = fallback_reason
         return result
     except Exception as e:
         logger.error(f"FDM fallback also failed: {e}")

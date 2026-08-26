@@ -10,6 +10,7 @@ import {
   submitSimulation,
   submitCompare,
   pollUntilDone,
+  pollTimeoutMsFor,
 } from '../api/simulationApi';
 
 const STEPS = ['Geometry', 'Materials', 'Orientation', 'Submit'];
@@ -862,9 +863,17 @@ export default function InputPage() {
   const handleSubmit = async () => {
     setCancelled(false);
     setLoading(true);
+    const timeoutMs = pollTimeoutMsFor(engine);
     const engineMsg = engine === 'ansys'
-      ? 'Phase 1: ANSYS building 3D shelter design... then Phase 2: FDM thermal analysis...'
+      ? 'ANSYS MAPDL: building 3D mesh and solving 24h transient thermal FEA (this can take several minutes)...'
       : 'Running FDM thermal simulation...';
+    const progressTick = (result, attempt) => {
+      if (cancelled) throw new Error('Cancelled');
+      if (engine === 'ansys') {
+        const elapsedMin = Math.round(((attempt + 1) * 3) / 60 * 10) / 10;
+        setLoadingMsg(`${engineMsg} (${elapsedMin} min elapsed)`);
+      }
+    };
     try {
       if (compareMode && variants.length > 0) {
         setLoadingMsg('Submitting comparison simulation...');
@@ -882,18 +891,20 @@ export default function InputPage() {
         ];
         const { job_id } = await submitCompare(allVariants);
         setLoadingMsg('Running comparative thermal simulation...');
-        const compareResult = await pollUntilDone(job_id, true, () => {
-          if (cancelled) throw new Error('Cancelled');
-        });
+        const compareResult = await pollUntilDone(job_id, true, progressTick, timeoutMs);
+        if (compareResult.status === 'failed') {
+          throw new Error(compareResult.error_message || 'Comparison simulation failed on the server.');
+        }
         navigate('/results', { state: { compareResult, input: formData, isCompare: true } });
       } else {
         setLoadingMsg('Submitting simulation...');
         const payload = buildPayload({ variant_label: 'Custom Design' });
         const { job_id } = await submitSimulation(payload);
         setLoadingMsg(engineMsg);
-        const result = await pollUntilDone(job_id, false, () => {
-          if (cancelled) throw new Error('Cancelled');
-        });
+        const result = await pollUntilDone(job_id, false, progressTick, timeoutMs);
+        if (result.status === 'failed') {
+          throw new Error(result.error_message || 'Simulation failed on the server.');
+        }
         navigate('/results', { state: { result, input: formData, isCompare: false } });
       }
     } catch (err) {

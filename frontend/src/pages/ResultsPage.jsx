@@ -274,6 +274,16 @@ export default function ResultsPage() {
           })()}
         </div>
 
+        {/* ANSYS Fallback Warning — shown whenever the real ANSYS solve failed
+            and the platform silently substituted the FDM result, so a
+            fallback is never mistaken for an actual ANSYS run. */}
+        {result?.ansys_fallback_reason && (
+          <div className="mt-4 bg-amber-50 text-amber-900 rounded-xl p-4 border border-amber-300 text-xs font-mono">
+            <span className="font-bold uppercase tracking-wider text-[11px]">⚠ ANSYS solve failed — showing Python FDM result instead</span>
+            <p className="mt-1 text-[11px] text-amber-800">{result.ansys_fallback_reason}</p>
+          </div>
+        )}
+
         {/* ANSYS FEA Details Telemetry Card */}
         {(result?.ansys_fea_details || result?.ansys_thermal_solved) && (
           <div className="mt-4 bg-slate-950 text-slate-200 rounded-xl p-4 border border-slate-800 text-xs font-mono">
@@ -285,7 +295,7 @@ export default function ResultsPage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px]">
               <div><span className="text-slate-400 block text-[9px] uppercase">Solver Formulation:</span> {result.ansys_fea_details?.solver || 'MAPDL SOLID70 Transient'}</div>
-              <div><span className="text-slate-400 block text-[9px] uppercase">Mesh Nodes:</span> {result.ansys_fea_details?.total_nodes?.toLocaleString() || result.geometry?.total_nodes?.toLocaleString() || '1,420'}</div>
+              <div><span className="text-slate-400 block text-[9px] uppercase">Mesh Nodes:</span> {result.ansys_fea_details?.total_nodes?.toLocaleString() || result.geometry?.total_nodes?.toLocaleString() || '—'}</div>
               <div><span className="text-slate-400 block text-[9px] uppercase">Peak Nodal Temp:</span> <strong className="text-amber-400">{result.ansys_fea_details?.peak_temp_any_C?.toFixed(1) ?? '—'}°C</strong></div>
               <div><span className="text-slate-400 block text-[9px] uppercase">Min Nodal Temp:</span> <strong className="text-sky-400">{result.ansys_fea_details?.min_temp_any_C?.toFixed(1) ?? '—'}°C</strong></div>
               <div className="col-span-2 sm:col-span-4 pt-1 text-slate-400 text-[10px] border-t border-slate-800/80">
