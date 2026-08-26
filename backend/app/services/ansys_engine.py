@@ -12,6 +12,7 @@ ANSYS executable path is config-driven via MAPDL_EXEC_PATH env var.
 """
 import math
 import os
+import shutil
 import logging
 import uuid
 import numpy as np
@@ -20,11 +21,64 @@ from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-MAPDL_EXEC = os.environ.get(
-    "MAPDL_EXEC_PATH",
-    r"E:\ANSYSACADEMICSTUDENT\ANSYS Inc\ANSYS Student\v261\ansys\bin\winx64\ANSYS261.exe"
-)
 JOBS_DIR = Path(os.environ.get("ANSYS_JOBS_DIR", "simulation/jobs"))
+
+# ANSYS versions to probe, newest first (v261 = 2026 R1, v252 = 2025 R2, ...)
+_ANSYS_VERSIONS = ["261", "252", "251", "242", "241", "232", "231", "222", "221"]
+
+
+def find_mapdl_executable() -> Optional[str]:
+    """
+    Locate the MAPDL executable.
+
+    Order:
+      1. MAPDL_EXEC_PATH env var (explicit override, always wins)
+      2. AWP_ROOTxxx env vars that the ANSYS installer sets
+      3. Common install roots across drive letters, for both the
+         Commercial/Enterprise layout (ANSYS Inc\\vXXX) and the
+         Student layout (ANSYS Inc\\ANSYS Student\\vXXX)
+
+    Returns the path as a string, or None if nothing was found.
+    """
+    override = os.environ.get("MAPDL_EXEC_PATH")
+    if override:
+        # An explicit override is honoured even if missing, so the
+        # resulting error names the path the user actually configured.
+        return override
+
+    # AWP_ROOT261 etc. point at the install root, e.g. C:\Program Files\ANSYS Inc\v261
+    for ver in _ANSYS_VERSIONS:
+        root = os.environ.get(f"AWP_ROOT{ver}")
+        if root:
+            candidate = Path(root) / "ansys" / "bin" / "winx64" / f"ANSYS{ver}.exe"
+            if candidate.exists():
+                return str(candidate)
+
+    drives = ["C:", "D:", "E:", "F:"]
+    prefixes = [
+        r"\Program Files\ANSYS Inc",
+        r"\ANSYS Inc",
+        r"\Program Files\ANSYS Inc\ANSYS Student",
+        r"\ANSYS Inc\ANSYS Student",
+        r"\ANSYSACADEMICSTUDENT\ANSYS Inc\ANSYS Student",
+    ]
+    for ver in _ANSYS_VERSIONS:
+        for drive in drives:
+            for prefix in prefixes:
+                candidate = (
+                    Path(f"{drive}{prefix}") / f"v{ver}"
+                    / "ansys" / "bin" / "winx64" / f"ANSYS{ver}.exe"
+                )
+                if candidate.exists():
+                    return str(candidate)
+
+    # Linux / already-on-PATH installs
+    for name in ["mapdl", "ansys261", "ansys252"]:
+        found = shutil.which(name)
+        if found:
+            return found
+
+    return None
 
 
 def _liu_jordan_transposition(
@@ -153,9 +207,18 @@ def _build_and_solve_pymapdl(inputs, materials_db: dict, climate_profile: dict, 
     """
     from ansys.mapdl.core import launch_mapdl
 
-    exec_path = MAPDL_EXEC
+    exec_path = find_mapdl_executable()
+    if exec_path is None:
+        raise FileNotFoundError(
+            "No ANSYS MAPDL installation found. Set MAPDL_EXEC_PATH to the full "
+            "path of ANSYS<ver>.exe, e.g. "
+            r"C:\Program Files\ANSYS Inc\v261\ansys\bin\winx64\ANSYS261.exe"
+        )
     if not Path(exec_path).exists():
-        raise FileNotFoundError(f"MAPDL executable not found: {exec_path}")
+        raise FileNotFoundError(
+            f"MAPDL executable not found at MAPDL_EXEC_PATH={exec_path}"
+        )
+    logger.info(f"Using MAPDL executable: {exec_path}")
 
     mapdl = launch_mapdl(
         exec_file=exec_path,
@@ -269,7 +332,10 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
     template_dir = Path(__file__).parent / "apdl_templates"
     design_apdl = template_dir / "shelter_design.apdl"
 
-    # Set parameters that the APDL template expects
+    # Set parameters that the APDL template expects.
+    # PSET=1 tells shelter_design.apdl that parameters are injected, so it
+    # skips its own defaults instead of overwriting these values.
+    mapdl.parameters["PSET"] = 1
     mapdl.parameters["SLEN"] = L
     mapdl.parameters["SWID"] = W
     mapdl.parameters["SHGT"] = H
@@ -380,37 +446,46 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
 
     T0 = amb_temps[0]
 
-    # Roof top Y coordinate
-    roof_top = H + 1.6 + 0.35  # pitched roof
+    # NOTE ON AXES: shelter_design.apdl builds the model with
+    #   X = length (0 .. SLEN+2*WTHK)
+    #   Y = width  (0 .. SWID+2*WTHK)   <- south wall at Y=0, north wall at Y=max
+    #   Z = height (-0.3 .. SHGT+...)   <- Z is UP, not Y
+    # Every selection below follows that convention. Using Y as the vertical
+    # axis selects zero nodes and silently produces no thermal result.
+    PITCH_H = 1.6                       # matches *SET,PH,1.6 in the template
+    slope_top = H + PITCH_H * 0.55 + 0.15   # top of the two gable slopes
+    ridge_top = H + PITCH_H + 0.15          # top of the ridge cap
 
     # Exterior surface selection + convection BC
-    mapdl.nsel("S", "LOC", "Y", -0.31, -0.29)      # Foundation bottom
+    mapdl.nsel("S", "LOC", "Z", -0.31, -0.29)       # Foundation bottom
     mapdl.nsel("A", "LOC", "X", -0.01, 0.01)        # West outer
     mapdl.nsel("A", "LOC", "X", L + 2*wthk - 0.01, L + 2*wthk + 0.01)  # East outer
-    mapdl.nsel("A", "LOC", "Y", roof_top - 0.02, roof_top + 0.05)       # Roof top
-    mapdl.nsel("A", "LOC", "Z", -0.01, 0.01)        # South outer
-    mapdl.nsel("A", "LOC", "Z", W + 2*wthk - 0.01, W + 2*wthk + 0.01)  # North outer
+    mapdl.nsel("A", "LOC", "Z", slope_top - 0.02, slope_top + 0.05)    # Roof slope tops
+    mapdl.nsel("A", "LOC", "Z", ridge_top - 0.02, ridge_top + 0.05)    # Ridge cap top
+    mapdl.nsel("A", "LOC", "Y", -0.01, 0.01)        # South outer
+    mapdl.nsel("A", "LOC", "Y", W + 2*wthk - 0.01, W + 2*wthk + 0.01)  # North outer
     mapdl.cm("EXT_NODES", "NODE")
     mapdl.sf("EXT_NODES", "CONV", "%HEXT_TB%", "%TAMB_TB%")
 
-    # Solar flux on south wall exterior
-    mapdl.nsel("S", "LOC", "Z", -0.01, 0.01)
+    # Solar flux on south wall exterior (Y = 0 face)
+    mapdl.nsel("S", "LOC", "Y", -0.01, 0.01)
     mapdl.sf("ALL", "HFLUX", "%QSOLS_TB%")
 
-    # Solar flux on roof
-    mapdl.nsel("S", "LOC", "Y", roof_top - 0.02, roof_top + 0.05)
+    # Solar flux on roof (both slope tops and the ridge cap)
+    mapdl.nsel("S", "LOC", "Z", slope_top - 0.02, slope_top + 0.05)
+    mapdl.nsel("A", "LOC", "Z", ridge_top - 0.02, ridge_top + 0.05)
     mapdl.sf("ALL", "HFLUX", "%QSOLR_TB%")
 
-    # Ground BC: fixed deep-ground temperature
-    mapdl.nsel("S", "LOC", "Y", -0.32, -0.28)
+    # Ground BC: fixed deep-ground temperature at the foundation underside
+    mapdl.nsel("S", "LOC", "Z", -0.32, -0.28)
     mapdl.d("ALL", "TEMP", 4.0)
 
     # Interior air convection (inner wall faces)
     mapdl.allsel()
-    mapdl.nsel("S", "LOC", "Z", wthk * 0.4, wthk * 0.6)
-    mapdl.nsel("A", "LOC", "Z", W + wthk * 1.4, W + wthk * 1.6)
-    mapdl.nsel("A", "LOC", "X", wthk * 0.4, wthk * 0.6)
-    mapdl.nsel("A", "LOC", "X", L + wthk * 1.4, L + wthk * 1.6)
+    mapdl.nsel("S", "LOC", "Y", wthk * 0.4, wthk * 0.6)                  # South inner
+    mapdl.nsel("A", "LOC", "Y", W + wthk * 1.4, W + wthk * 1.6)          # North inner
+    mapdl.nsel("A", "LOC", "X", wthk * 0.4, wthk * 0.6)                  # West inner
+    mapdl.nsel("A", "LOC", "X", L + wthk * 1.4, L + wthk * 1.6)          # East inner
     mapdl.sf("ALL", "CONV", 4.0, T0)
 
     mapdl.allsel()
@@ -450,10 +525,11 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
     if T_max_all is None:
         T_max_all, T_min_all = T0, T0
 
-    # Interior core nodes (away from walls) — coordinate-masked
+    # Interior core nodes (away from walls) — coordinate-masked.
+    # Template axes: X = length, Y = width, Z = height.
     int_x = (wthk + 0.3, wthk + L - 0.3)
-    int_z = (wthk + 0.3, wthk + W - 0.3)
-    int_y = (0.2, H - 0.2)
+    int_y = (wthk + 0.3, wthk + W - 0.3)
+    int_z = (0.2, H - 0.2)
     T_int_avg, T_int_max, T_int_min = _numpy_extract_temps(
         mapdl, x_range=int_x, z_range=int_z, y_range=int_y,
     )
@@ -500,50 +576,51 @@ def _extract_surface_temperatures(mapdl, L, W, H, wthk) -> dict:
     Extract average inner-surface temperature for each building component
     using numpy coordinate masking (not invalid *GET NODE,0,TEMP,MEAN).
     """
+    # Template axes: X = length, Y = width, Z = height.
     temps = {}
-    x_inner = (wthk + 0.2, wthk + L - 0.2)
-    z_inner = (wthk + 0.2, wthk + W - 0.2)
-    y_mid = (0.5, H * 0.8)
+    x_inner = (wthk + 0.2, wthk + L - 0.2)   # along length, clear of end walls
+    y_inner = (wthk + 0.2, wthk + W - 0.2)   # across width, clear of side walls
+    z_mid = (0.5, H * 0.8)                   # mid-height band of the wall
 
-    # South wall inner surface
+    # South wall inner surface (low Y face)
     avg, _, _ = _numpy_extract_temps(
-        mapdl, x_range=x_inner, y_range=y_mid,
-        z_range=(wthk * 0.85, wthk * 1.15),
+        mapdl, x_range=x_inner, z_range=z_mid,
+        y_range=(wthk * 0.85, wthk * 1.15),
     )
     temps["south_wall_inner_C"] = avg
 
-    # North wall inner surface
+    # North wall inner surface (high Y face)
     avg, _, _ = _numpy_extract_temps(
-        mapdl, x_range=x_inner, y_range=y_mid,
-        z_range=(W + wthk * 0.85, W + wthk * 1.15),
+        mapdl, x_range=x_inner, z_range=z_mid,
+        y_range=(W + wthk * 0.85, W + wthk * 1.15),
     )
     temps["north_wall_inner_C"] = avg
 
-    # East wall inner surface
+    # East wall inner surface (high X face)
     avg, _, _ = _numpy_extract_temps(
-        mapdl, z_range=z_inner, y_range=y_mid,
+        mapdl, y_range=y_inner, z_range=z_mid,
         x_range=(L + wthk * 0.85, L + wthk * 1.15),
     )
     temps["east_wall_inner_C"] = avg
 
-    # West wall inner surface
+    # West wall inner surface (low X face)
     avg, _, _ = _numpy_extract_temps(
-        mapdl, z_range=z_inner, y_range=y_mid,
+        mapdl, y_range=y_inner, z_range=z_mid,
         x_range=(wthk * 0.85, wthk * 1.15),
     )
     temps["west_wall_inner_C"] = avg
 
-    # Roof underside
+    # Roof underside (just below/at wall top height)
     avg, _, _ = _numpy_extract_temps(
-        mapdl, x_range=x_inner, z_range=z_inner,
-        y_range=(H - 0.1, H + 0.2),
+        mapdl, x_range=x_inner, y_range=y_inner,
+        z_range=(H - 0.1, H + 0.2),
     )
     temps["roof_inner_C"] = avg
 
-    # Floor surface
+    # Floor surface (top of the 0.15 m floor slab)
     avg, _, _ = _numpy_extract_temps(
-        mapdl, x_range=x_inner, z_range=z_inner,
-        y_range=(0.10, 0.20),
+        mapdl, x_range=x_inner, y_range=y_inner,
+        z_range=(0.10, 0.20),
     )
     temps["floor_surface_C"] = avg
 

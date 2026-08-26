@@ -12,12 +12,18 @@
 !   KFLOOR/RHOFLOOR/CPFLOOR - Floor material properties
 ! ============================================================
 
-! Defaults (overridden by run_design.apdl header)
-*SET,SLEN,6.0   $ *SET,SWID,4.0   $ *SET,SHGT,3.0  $ *SET,WTHK,0.45
-*SET,NWIN,3     $ *SET,NDOOR,1    $ *SET,SHAPE,0   $ *SET,ROOFT,1
-*SET,KWALL,0.72 $ *SET,RHOWALL,1800 $ *SET,CPWALL,840
-*SET,KROOF,0.15 $ *SET,RHOROOF,650  $ *SET,CPROOF,1200
-*SET,KFLOOR,1.80$ *SET,RHOFLOOR,2400$ *SET,CPFLOOR,900
+! Defaults — applied ONLY when the caller has not already injected parameters.
+! The caller (PyMAPDL engine or run_design.apdl) signals this by setting PSET=1
+! before running this file. Without that guard these *SET lines would silently
+! overwrite the injected geometry/material values and ANSYS would always build
+! the same default shelter regardless of the user's design.
+*IF,PSET,NE,1,THEN
+  *SET,SLEN,6.0   $ *SET,SWID,4.0   $ *SET,SHGT,3.0  $ *SET,WTHK,0.45
+  *SET,NWIN,3     $ *SET,NDOOR,1    $ *SET,SHAPE,0   $ *SET,ROOFT,1
+  *SET,KWALL,0.72 $ *SET,RHOWALL,1800 $ *SET,CPWALL,840
+  *SET,KROOF,0.15 $ *SET,RHOROOF,650  $ *SET,CPROOF,1200
+  *SET,KFLOOR,1.80$ *SET,RHOFLOOR,2400$ *SET,CPFLOOR,900
+*ENDIF
 
 /PREP7
 ET,1,SOLID70

@@ -21,8 +21,9 @@ from app.pipeline.climate_repo import ClimateTimeSeries
 
 logger = logging.getLogger(__name__)
 
-MAPDL_EXEC_DEFAULT = r"D:\ANSYS Inc\ANSYS Student\v261\ansys\bin\winx64\MAPDL.exe"
-JOBS_BASE_DIR = Path("d:/SIH/simulation/pipeline_jobs")
+JOBS_BASE_DIR = Path(
+    os.environ.get("ANSYS_PIPELINE_JOBS_DIR", "simulation/pipeline_jobs")
+)
 
 
 def build_ansys_contract_payload(
@@ -226,8 +227,14 @@ def run_ansys_evaluation(
     Supports native MAPDL execution or transparent MOCK mode.
     """
     payload = build_ansys_contract_payload(candidate, climate)
-    exec_path = mapdl_exec_path or MAPDL_EXEC_DEFAULT
-    has_real_ansys = (mode in ["auto", "mapdl"]) and os.path.isfile(exec_path)
+    # Share the engine's installation discovery instead of a hardcoded path,
+    # so this works on Student and Commercial installs alike.
+    from app.services.ansys_engine import find_mapdl_executable
+
+    exec_path = mapdl_exec_path or find_mapdl_executable()
+    has_real_ansys = (
+        (mode in ["auto", "mapdl"]) and bool(exec_path) and os.path.isfile(exec_path)
+    )
 
     job_id = candidate.candidate_id
     job_dir = JOBS_BASE_DIR / job_id
@@ -252,7 +259,7 @@ def run_ansys_evaluation(
                 "candidate_id": job_id,
                 "job_dir": str(job_dir),
                 "ansys_exit_code": res.returncode,
-                "fea_engine": "ANSYS Student v2026 R1 SOLID70",
+                "fea_engine": "ANSYS MAPDL SOLID70",
                 "contract_valid": True,
             }
         except Exception as e:
