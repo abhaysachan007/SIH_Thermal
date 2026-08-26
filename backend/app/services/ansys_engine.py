@@ -117,6 +117,35 @@ def _solar_position(hour: float, lat_deg: float, dec_deg: float):
 SEASON_DECLINATION = {"winter": -21.3, "summer": 21.5, "spring": 9.4, "autumn": -3.0}
 
 
+def _numpy_extract_temps(mapdl, x_range=None, y_range=None, z_range=None):
+    """
+    Extract temperatures using numpy coordinate masking instead of
+    invalid APDL *GET NODE,0,TEMP,MEAN queries (MEAN is not a valid
+    *GET sub-operation for NODE entity — it silently returns 0).
+
+    Call after mapdl.set() to choose the time step.
+    Returns (mean, max, min) tuple for nodes within the coordinate box.
+    Returns (None, None, None) if no nodes match.
+    """
+    mapdl.allsel()
+    all_temps = mapdl.post_processing.nodal_temperature
+    all_coords = mapdl.mesh.nodes
+
+    mask = np.ones(len(all_temps), dtype=bool)
+    if x_range is not None:
+        mask &= (all_coords[:, 0] >= x_range[0]) & (all_coords[:, 0] <= x_range[1])
+    if y_range is not None:
+        mask &= (all_coords[:, 1] >= y_range[0]) & (all_coords[:, 1] <= y_range[1])
+    if z_range is not None:
+        mask &= (all_coords[:, 2] >= z_range[0]) & (all_coords[:, 2] <= z_range[1])
+
+    selected = all_temps[mask]
+    if len(selected) == 0:
+        return None, None, None
+
+    return float(np.mean(selected)), float(np.max(selected)), float(np.min(selected))
+
+
 def _build_and_solve_pymapdl(inputs, materials_db: dict, climate_profile: dict, job_dir: Path) -> dict:
     """
     Launch PyMAPDL, build shelter geometry, apply thermal BCs, solve transient,
@@ -408,24 +437,28 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
 
     mapdl.finish()
 
-    # -- POST-PROCESSING: Extract temperatures --
+    # -- POST-PROCESSING: Extract temperatures via numpy --
+    # All temperature extraction uses mapdl.post_processing.nodal_temperature
+    # with coordinate-mask filtering, NOT invalid *GET NODE,0,TEMP,MEAN.
     mapdl.post1()
 
     # Read last time step
     mapdl.set("LAST")
 
-    # Get overall temperature extremes
-    T_max_all = mapdl.get("T_MAX_ALL", "NODE", 0, "TEMP", "MAX")
-    T_min_all = mapdl.get("T_MIN_ALL", "NODE", 0, "TEMP", "MIN")
+    # Overall temperature extremes (all nodes, no coordinate filter)
+    all_avg, T_max_all, T_min_all = _numpy_extract_temps(mapdl)
+    if T_max_all is None:
+        T_max_all, T_min_all = T0, T0
 
-    # Interior core nodes (away from walls)
-    mapdl.nsel("S", "LOC", "X", wthk + 0.3, wthk + L - 0.3)
-    mapdl.nsel("R", "LOC", "Z", wthk + 0.3, wthk + W - 0.3)
-    mapdl.nsel("R", "LOC", "Y", 0.2, H - 0.2)
-    T_int_max = mapdl.get("T_INT_MAX", "NODE", 0, "TEMP", "MAX")
-    T_int_min = mapdl.get("T_INT_MIN", "NODE", 0, "TEMP", "MIN")
-    T_int_avg = mapdl.get("T_INT_AVG", "NODE", 0, "TEMP", "MEAN")
-    mapdl.allsel()
+    # Interior core nodes (away from walls) — coordinate-masked
+    int_x = (wthk + 0.3, wthk + L - 0.3)
+    int_z = (wthk + 0.3, wthk + W - 0.3)
+    int_y = (0.2, H - 0.2)
+    T_int_avg, T_int_max, T_int_min = _numpy_extract_temps(
+        mapdl, x_range=int_x, z_range=int_z, y_range=int_y,
+    )
+    if T_int_avg is None:
+        T_int_avg, T_int_max, T_int_min = T0, T0, T0
 
     # Per-surface inner temperatures for thermal visualization
     surface_temps = _extract_surface_temperatures(mapdl, L, W, H, wthk)
@@ -434,12 +467,10 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
     hourly_inside = []
     for ih in range(1, 25):
         mapdl.set(ih)
-        mapdl.nsel("S", "LOC", "X", wthk + 0.3, wthk + L - 0.3)
-        mapdl.nsel("R", "LOC", "Z", wthk + 0.3, wthk + W - 0.3)
-        mapdl.nsel("R", "LOC", "Y", 0.2, H - 0.2)
-        t_hr = mapdl.get("T_HR_VAL", "NODE", 0, "TEMP", "MEAN")
-        hourly_inside.append(float(t_hr))
-        mapdl.allsel()
+        t_avg, _, _ = _numpy_extract_temps(
+            mapdl, x_range=int_x, z_range=int_z, y_range=int_y,
+        )
+        hourly_inside.append(float(t_avg) if t_avg is not None else float(T0))
 
     mapdl.finish()
 
@@ -465,68 +496,56 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
 
 
 def _extract_surface_temperatures(mapdl, L, W, H, wthk) -> dict:
-    """Extract average inner-surface temperature for each building component."""
+    """
+    Extract average inner-surface temperature for each building component
+    using numpy coordinate masking (not invalid *GET NODE,0,TEMP,MEAN).
+    """
     temps = {}
+    x_inner = (wthk + 0.2, wthk + L - 0.2)
+    z_inner = (wthk + 0.2, wthk + W - 0.2)
+    y_mid = (0.5, H * 0.8)
 
     # South wall inner surface
-    try:
-        mapdl.nsel("S", "LOC", "Z", wthk * 0.85, wthk * 1.15)
-        mapdl.nsel("R", "LOC", "Y", 0.5, H * 0.8)
-        mapdl.nsel("R", "LOC", "X", wthk + 0.2, wthk + L - 0.2)
-        temps["south_wall_inner_C"] = float(mapdl.get("T_SW", "NODE", 0, "TEMP", "MEAN"))
-    except Exception:
-        temps["south_wall_inner_C"] = None
-    mapdl.allsel()
+    avg, _, _ = _numpy_extract_temps(
+        mapdl, x_range=x_inner, y_range=y_mid,
+        z_range=(wthk * 0.85, wthk * 1.15),
+    )
+    temps["south_wall_inner_C"] = avg
 
     # North wall inner surface
-    try:
-        mapdl.nsel("S", "LOC", "Z", W + wthk * 0.85, W + wthk * 1.15)
-        mapdl.nsel("R", "LOC", "Y", 0.5, H * 0.8)
-        mapdl.nsel("R", "LOC", "X", wthk + 0.2, wthk + L - 0.2)
-        temps["north_wall_inner_C"] = float(mapdl.get("T_NW", "NODE", 0, "TEMP", "MEAN"))
-    except Exception:
-        temps["north_wall_inner_C"] = None
-    mapdl.allsel()
+    avg, _, _ = _numpy_extract_temps(
+        mapdl, x_range=x_inner, y_range=y_mid,
+        z_range=(W + wthk * 0.85, W + wthk * 1.15),
+    )
+    temps["north_wall_inner_C"] = avg
 
     # East wall inner surface
-    try:
-        mapdl.nsel("S", "LOC", "X", L + wthk * 0.85, L + wthk * 1.15)
-        mapdl.nsel("R", "LOC", "Y", 0.5, H * 0.8)
-        mapdl.nsel("R", "LOC", "Z", wthk + 0.2, wthk + W - 0.2)
-        temps["east_wall_inner_C"] = float(mapdl.get("T_EW", "NODE", 0, "TEMP", "MEAN"))
-    except Exception:
-        temps["east_wall_inner_C"] = None
-    mapdl.allsel()
+    avg, _, _ = _numpy_extract_temps(
+        mapdl, z_range=z_inner, y_range=y_mid,
+        x_range=(L + wthk * 0.85, L + wthk * 1.15),
+    )
+    temps["east_wall_inner_C"] = avg
 
     # West wall inner surface
-    try:
-        mapdl.nsel("S", "LOC", "X", wthk * 0.85, wthk * 1.15)
-        mapdl.nsel("R", "LOC", "Y", 0.5, H * 0.8)
-        mapdl.nsel("R", "LOC", "Z", wthk + 0.2, wthk + W - 0.2)
-        temps["west_wall_inner_C"] = float(mapdl.get("T_WW", "NODE", 0, "TEMP", "MEAN"))
-    except Exception:
-        temps["west_wall_inner_C"] = None
-    mapdl.allsel()
+    avg, _, _ = _numpy_extract_temps(
+        mapdl, z_range=z_inner, y_range=y_mid,
+        x_range=(wthk * 0.85, wthk * 1.15),
+    )
+    temps["west_wall_inner_C"] = avg
 
     # Roof underside
-    try:
-        mapdl.nsel("S", "LOC", "Y", H - 0.1, H + 0.2)
-        mapdl.nsel("R", "LOC", "X", wthk + 0.2, wthk + L - 0.2)
-        mapdl.nsel("R", "LOC", "Z", wthk + 0.2, wthk + W - 0.2)
-        temps["roof_inner_C"] = float(mapdl.get("T_RF", "NODE", 0, "TEMP", "MEAN"))
-    except Exception:
-        temps["roof_inner_C"] = None
-    mapdl.allsel()
+    avg, _, _ = _numpy_extract_temps(
+        mapdl, x_range=x_inner, z_range=z_inner,
+        y_range=(H - 0.1, H + 0.2),
+    )
+    temps["roof_inner_C"] = avg
 
     # Floor surface
-    try:
-        mapdl.nsel("S", "LOC", "Y", 0.10, 0.20)
-        mapdl.nsel("R", "LOC", "X", wthk + 0.2, wthk + L - 0.2)
-        mapdl.nsel("R", "LOC", "Z", wthk + 0.2, wthk + W - 0.2)
-        temps["floor_surface_C"] = float(mapdl.get("T_FL", "NODE", 0, "TEMP", "MEAN"))
-    except Exception:
-        temps["floor_surface_C"] = None
-    mapdl.allsel()
+    avg, _, _ = _numpy_extract_temps(
+        mapdl, x_range=x_inner, z_range=z_inner,
+        y_range=(0.10, 0.20),
+    )
+    temps["floor_surface_C"] = avg
 
     return temps
 
