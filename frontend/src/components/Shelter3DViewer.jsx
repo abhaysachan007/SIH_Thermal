@@ -34,6 +34,13 @@ export default function Shelter3DViewer({
 
   // Surface temperatures from ANSYS FEA (if available)
   const surfTemps = ansysData?.surface_temperatures || ansysData?.result?.surface_temperatures || null;
+  const surfTempValuesTop = surfTemps
+    ? Object.values(surfTemps).filter((v) => v != null)
+    : [];
+  // Same range the 3D model's thermal colors are normalized against, so the
+  // scale bar's printed min/max always matches what the colors represent.
+  const scaleMaxTemp = surfTempValuesTop.length ? Math.max(...surfTempValuesTop) + 2 : maxInsideTemp + 5;
+  const scaleMinTemp = surfTempValuesTop.length ? Math.min(...surfTempValuesTop) - 2 : minInsideTemp - 5;
 
   // Parse and expand all openings dynamically
   const rawOpenings = shelterData?.openings || [];
@@ -170,11 +177,14 @@ export default function Shelter3DViewer({
     // FLIR thermal color mapping: maps temperature to infrared spectrum
     // Uses real ANSYS surface temperatures when available, falls back to solar exposure
     const surfTemps = ansysData?.surface_temperatures || ansysData?.result?.surface_temperatures || null;
+    // Normalize against the same surface-temperature range the scale bar
+    // legend prints (scaleMinTemp/scaleMaxTemp, computed above from
+    // surfTemps) — using the narrower interior min/max here clipped hot
+    // surfaces to saturated red and pushed very cold surfaces into the
+    // "moderate" green band instead of blue, misrepresenting real ANSYS data.
     const getThermalColorFromTemp = (tempC) => {
       // Map temperature range to FLIR color spectrum
-      const tMin = minInsideTemp - 5;
-      const tMax = maxInsideTemp + 5;
-      const norm = Math.max(0, Math.min(1, (tempC - tMin) / Math.max(1, tMax - tMin)));
+      const norm = Math.max(0, Math.min(1, (tempC - scaleMinTemp) / Math.max(1, scaleMaxTemp - scaleMinTemp)));
       if (norm > 0.85) return 0xef4444; // Hot Red
       if (norm > 0.65) return 0xf59e0b; // Warm Amber
       if (norm > 0.45) return 0xeab308; // Yellow
@@ -861,7 +871,7 @@ export default function Shelter3DViewer({
             {/* FLIR Infrared Thermal Temperature Scale Bar with Surface Readings */}
             {thermalMode && (
               <div className="absolute top-3 right-3 bg-slate-900/90 backdrop-blur-md rounded-xl p-2.5 border border-slate-700 shadow-2xl flex flex-col items-center text-white text-[11px] font-mono select-none">
-                <span className="font-bold text-rose-400 mb-1">{maxInsideTemp >= 0 ? '+' : ''}{maxInsideTemp.toFixed(1)}°C</span>
+                <span className="font-bold text-rose-400 mb-1">{scaleMaxTemp >= 0 ? '+' : ''}{scaleMaxTemp.toFixed(1)}°C</span>
                 <div
                   className="w-3 rounded-sm my-1 shadow-inner"
                   style={{
@@ -869,7 +879,7 @@ export default function Shelter3DViewer({
                     background: 'linear-gradient(to bottom, #ffffff, #ef4444, #f97316, #eab308, #84cc16, #06b6d4, #1d4ed8, #050b14)',
                   }}
                 />
-                <span className="font-bold text-sky-400 mt-1">{minInsideTemp.toFixed(1)}°C</span>
+                <span className="font-bold text-sky-400 mt-1">{scaleMinTemp >= 0 ? '+' : ''}{scaleMinTemp.toFixed(1)}°C</span>
                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">
                   {surfTemps ? 'ANSYS FEA' : 'FLIR IR'}
                 </span>
