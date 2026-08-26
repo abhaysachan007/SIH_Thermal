@@ -861,7 +861,7 @@ export default function Shelter3DViewer({
             {/* FLIR Infrared Thermal Temperature Scale Bar with Surface Readings */}
             {thermalMode && (
               <div className="absolute top-3 right-3 bg-slate-900/90 backdrop-blur-md rounded-xl p-2.5 border border-slate-700 shadow-2xl flex flex-col items-center text-white text-[11px] font-mono select-none">
-                <span className="font-bold text-rose-400 mb-1">+{maxInsideTemp.toFixed(1)}°C</span>
+                <span className="font-bold text-rose-400 mb-1">{maxInsideTemp >= 0 ? '+' : ''}{maxInsideTemp.toFixed(1)}°C</span>
                 <div
                   className="w-3 rounded-sm my-1 shadow-inner"
                   style={{

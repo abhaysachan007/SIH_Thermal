@@ -372,7 +372,7 @@ export default function ResultsPage() {
           <div className="bg-slate-900/80 rounded-xl p-3.5 border border-slate-800/80">
             <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Max Thermal Lift (ΔT)</span>
             <div className="text-xl font-bold text-emerald-400 mt-1">
-              +{activePrimary.maxDiff != null ? activePrimary.maxDiff.toFixed(1) : '—'}°C
+              {activePrimary.maxDiff != null ? `${activePrimary.maxDiff >= 0 ? '+' : ''}${activePrimary.maxDiff.toFixed(1)}` : '—'}°C
             </div>
             <span className="text-[10px] text-emerald-500/80 block mt-0.5">Warmer than freezing outside</span>
           </div>
@@ -381,7 +381,7 @@ export default function ResultsPage() {
           <div className="bg-slate-900/80 rounded-xl p-3.5 border border-slate-800/80">
             <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Average ΔT Lift</span>
             <div className="text-xl font-bold text-sky-400 mt-1">
-              +{activePrimary.avgDiff != null ? activePrimary.avgDiff.toFixed(1) : '—'}°C
+              {activePrimary.avgDiff != null ? `${activePrimary.avgDiff >= 0 ? '+' : ''}${activePrimary.avgDiff.toFixed(1)}` : '—'}°C
             </div>
             <span className="text-[10px] text-sky-500/80 block mt-0.5">24-hour mean temperature boost</span>
           </div>
