@@ -251,6 +251,22 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
     shape = getattr(inputs, 'shape', 'rectangular')
     orient = float(getattr(inputs, 'orientation_deg', 180))
 
+    if shape == 'dome':
+        # shelter_design.apdl builds a genuinely different geometry for
+        # SHAPE=1 (hemisphere + cylindrical tunnel), but every boundary
+        # condition and temperature-extraction call below assumes the
+        # rectangular gable-roof box (planar X/Y/Z faces at wall-thickness
+        # offsets). Applying those selections to a dome would silently
+        # select the wrong nodes — or none — and produce meaningless
+        # results instead of a clear failure. Fail fast here so the caller
+        # falls back to the FDM engine (which does support the dome shape)
+        # with an honest reason, rather than shipping wrong physics.
+        raise NotImplementedError(
+            "ANSYS engine does not yet support the dome/igloo shape "
+            "(boundary conditions are only implemented for the rectangular "
+            "gable geometry). Falling back to Python FDM, which supports it."
+        )
+
     wmat = materials_db.get(getattr(inputs, 'wall_material_id', 'mud_brick'), {})
     rmat = materials_db.get(getattr(inputs, 'roof_material_id', 'mud_brick'), {})
     fmat = materials_db.get(getattr(inputs, 'floor_material_id', 'rammed_earth'), {})
