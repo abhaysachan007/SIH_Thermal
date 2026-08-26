@@ -137,7 +137,14 @@ def _liu_jordan_transposition(
     )
     cos_theta_t = max(0.0, cos_theta_t)
 
-    Rb = cos_theta_t / max(1e-6, cos_theta_z)
+    # Near sunrise/sunset, cos_theta_z (solar zenith cosine) approaches 0 far
+    # faster than cos_theta_t (incidence angle on a vertical wall) does, so
+    # this ratio can blow up to tens or hundreds of times the actual beam
+    # irradiance — an unphysical flux spike that shows up as a localized
+    # overheated node on the sun-facing wall. Cap Rb at the standard
+    # engineering limit used for the isotropic Liu-Jordan model at low sun
+    # angles.
+    Rb = min(10.0, cos_theta_t / max(1e-6, cos_theta_z))
 
     I_tilted = (
         I_beam * Rb
