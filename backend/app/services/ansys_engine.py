@@ -208,6 +208,57 @@ def _numpy_extract_temps(mapdl, x_range=None, y_range=None, z_range=None):
     return float(np.mean(selected)), float(np.max(selected)), float(np.min(selected))
 
 
+def _interior_proxy_temps(mapdl, L, W, H, wthk):
+    """
+    Interior-temperature proxy for a model where the room's air volume was
+    never meshed (shelter_design.apdl only builds solid volumes for the
+    walls/roof/floor/plinth — the hollow interior has zero nodes). Querying
+    a coordinate box in that empty interior always finds nothing and
+    silently falls back to a constant, which is why peak/min interior temp
+    came back identical every hour regardless of anything else in the model.
+
+    Union the six inner-wall-surface node bands (the same regions
+    _extract_surface_temperatures uses, which DO have real mesh nodes and
+    already show real spatial variation, e.g. a sun-facing wall vs a
+    shaded one) as the interior-condition proxy instead.
+    """
+    mapdl.allsel()
+    all_temps = mapdl.post_processing.nodal_temperature
+    if callable(all_temps):
+        all_temps = all_temps()
+    all_coords = mapdl.mesh.nodes
+    if callable(all_coords):
+        all_coords = all_coords()
+
+    def band_mask(x_range=None, y_range=None, z_range=None):
+        m = np.ones(len(all_temps), dtype=bool)
+        if x_range is not None:
+            m &= (all_coords[:, 0] >= x_range[0]) & (all_coords[:, 0] <= x_range[1])
+        if y_range is not None:
+            m &= (all_coords[:, 1] >= y_range[0]) & (all_coords[:, 1] <= y_range[1])
+        if z_range is not None:
+            m &= (all_coords[:, 2] >= z_range[0]) & (all_coords[:, 2] <= z_range[1])
+        return m
+
+    x_inner = (wthk + 0.2, wthk + L - 0.2)
+    y_inner = (wthk + 0.2, wthk + W - 0.2)
+    z_mid = (0.5, H * 0.8)
+
+    combined = (
+        band_mask(x_range=x_inner, z_range=z_mid, y_range=(wthk * 0.85, wthk * 1.15)) |
+        band_mask(x_range=x_inner, z_range=z_mid, y_range=(W + wthk * 0.85, W + wthk * 1.15)) |
+        band_mask(y_range=y_inner, z_range=z_mid, x_range=(L + wthk * 0.85, L + wthk * 1.15)) |
+        band_mask(y_range=y_inner, z_range=z_mid, x_range=(wthk * 0.85, wthk * 1.15)) |
+        band_mask(x_range=x_inner, y_range=y_inner, z_range=(H - 0.1, H + 0.2)) |
+        band_mask(x_range=x_inner, y_range=y_inner, z_range=(0.10, 0.20))
+    )
+
+    selected = all_temps[combined]
+    if len(selected) == 0:
+        return None, None, None
+    return float(np.mean(selected)), float(np.max(selected)), float(np.min(selected))
+
+
 def _build_and_solve_pymapdl(inputs, materials_db: dict, climate_profile: dict, job_dir: Path) -> dict:
     """
     Launch PyMAPDL, build shelter geometry, apply thermal BCs, solve transient,
@@ -576,14 +627,10 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
     if T_max_all is None:
         T_max_all, T_min_all = T0, T0
 
-    # Interior core nodes (away from walls) — coordinate-masked.
-    # Template axes: X = length, Y = width, Z = height.
-    int_x = (wthk + 0.3, wthk + L - 0.3)
-    int_y = (wthk + 0.3, wthk + W - 0.3)
-    int_z = (0.2, H - 0.2)
-    T_int_avg, T_int_max, T_int_min = _numpy_extract_temps(
-        mapdl, x_range=int_x, z_range=int_z, y_range=int_y,
-    )
+    # Interior-temperature proxy: the room's interior air volume isn't
+    # meshed (only the solid envelope is), so this uses the union of inner
+    # wall-surface node bands rather than an empty coordinate box.
+    T_int_avg, T_int_max, T_int_min = _interior_proxy_temps(mapdl, L, W, H, wthk)
     if T_int_avg is None:
         T_int_avg, T_int_max, T_int_min = T0, T0, T0
 
@@ -594,9 +641,7 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
     hourly_inside = []
     for ih in range(1, 25):
         mapdl.set(ih)
-        t_avg, _, _ = _numpy_extract_temps(
-            mapdl, x_range=int_x, z_range=int_z, y_range=int_y,
-        )
+        t_avg, _, _ = _interior_proxy_temps(mapdl, L, W, H, wthk)
         hourly_inside.append(float(t_avg) if t_avg is not None else float(T0))
 
     mapdl.finish()
