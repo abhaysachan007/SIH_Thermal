@@ -51,13 +51,44 @@ def process_raw_results(raw: dict) -> dict:
         1
     )
 
+    ambient_series = raw.get('ambient_temperature_series', [])
+    amb_temps = [p['value'] for p in ambient_series]
+    min_amb = min(amb_temps) if amb_temps else -20.0
+    max_amb = max(amb_temps) if amb_temps else 3.5
+    avg_amb = sum(amb_temps) / len(amb_temps) if amb_temps else -10.0
+
+    # Temperature difference (Inside vs Outside) and Temperature Drop metrics
+    inside_temp_drop = round(peak_temp - min_temp, 2)
+    outside_temp_drop = round(max_amb - min_amb, 2)
+
+    diffs = [temps[i] - amb_temps[i] for i in range(min(len(temps), len(amb_temps)))]
+    max_temp_diff = round(max(diffs), 2) if diffs else round(peak_temp - min_amb, 2)
+    min_temp_diff = round(min(diffs), 2) if diffs else round(min_temp - max_amb, 2)
+    avg_temp_diff = round(sum(diffs) / len(diffs), 2) if diffs else round(avg_temp - avg_amb, 2)
+
+    # Thermal damping ratio (% of outside freeze fluctuation eliminated)
+    thermal_damping_ratio = round(
+        max(0.0, min(100.0, (1.0 - inside_temp_drop / max(0.1, outside_temp_drop)) * 100.0)),
+        1
+    )
+
     raw.update({
         'peak_inside_temp_C': round(peak_temp, 2),
         'min_inside_temp_C': round(min_temp, 2),
         'avg_inside_temp_C': round(avg_temp, 2),
+        'min_ambient_temp_C': round(min_amb, 2),
+        'max_ambient_temp_C': round(max_amb, 2),
+        'avg_ambient_temp_C': round(avg_amb, 2),
+        'inside_temp_drop_C': inside_temp_drop,
+        'outside_temp_drop_C': outside_temp_drop,
+        'max_temp_diff_C': max_temp_diff,
+        'min_temp_diff_C': min_temp_diff,
+        'avg_temp_diff_C': avg_temp_diff,
+        'thermal_damping_ratio_pct': thermal_damping_ratio,
         'comfort_hours': int(comfort_hours),
         'total_solar_gain_kwh': round(total_solar_kwh, 3),
         'total_heat_loss_kwh': round(total_loss_kwh, 3),
         'efficiency_score': efficiency_score,
     })
     return raw
+

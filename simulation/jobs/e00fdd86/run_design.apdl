@@ -1,0 +1,570 @@
+/BATCH
+*SET,SLEN,6.0
+*SET,SWID,4.0
+*SET,SHGT,3.0
+*SET,WTHK,0.35
+*SET,NWIN,0
+*SET,NDOOR,0
+*SET,SHAPE,0
+*SET,ROOFT,1
+*SET,KWALL,0.52
+*SET,RHOWALL,1700
+*SET,CPWALL,879
+*SET,KROOF,0.52
+*SET,RHOROOF,1700
+*SET,CPROOF,879
+*SET,KFLOOR,0.85
+*SET,RHOFLOOR,2000
+*SET,CPFLOOR,840
+/TITLE, Ladakh Passive Shelter - Parametric 3D Model (Frontend Mirror)
+
+! ============================================================
+! PARAMETERS injected by run_design.apdl:
+!   SLEN   - Length (m)         SWID  - Width (m)
+!   SHGT   - Wall Height (m)    WTHK  - Wall Thickness (m)
+!   NWIN   - Windows on south wall   NDOOR - Doors (0,1,2)
+!   SHAPE  - 0=Rectangular  1=Dome/Igloo
+!   ROOFT  - 0=Flat roof    1=Gable pitched roof
+!   KWALL/RHOWALL/CPWALL  - Wall material properties
+!   KROOF/RHOROOF/CPROOF  - Roof material properties
+!   KFLOOR/RHOFLOOR/CPFLOOR - Floor material properties
+! ============================================================
+
+! Defaults (overridden by run_design.apdl header)
+*SET,SLEN,6.0   $ *SET,SWID,4.0   $ *SET,SHGT,3.0  $ *SET,WTHK,0.45
+*SET,NWIN,3     $ *SET,NDOOR,1    $ *SET,SHAPE,0   $ *SET,ROOFT,1
+*SET,KWALL,0.72 $ *SET,RHOWALL,1800 $ *SET,CPWALL,840
+*SET,KROOF,0.15 $ *SET,RHOROOF,650  $ *SET,CPROOF,1200
+*SET,KFLOOR,1.80$ *SET,RHOFLOOR,2400$ *SET,CPFLOOR,900
+
+/PREP7
+ET,1,SOLID70
+
+! --- Materials ---
+MP,KXX,1,KWALL  $ MP,DENS,1,RHOWALL  $ MP,C,1,CPWALL
+MP,KXX,2,KROOF  $ MP,DENS,2,RHOROOF  $ MP,C,2,CPROOF
+MP,KXX,3,1.80   $ MP,DENS,3,2400     $ MP,C,3,900
+MP,KXX,4,1.00   $ MP,DENS,4,2500     $ MP,C,4,750
+MP,KXX,5,0.15   $ MP,DENS,5,650      $ MP,C,5,1200
+MP,KXX,6,KFLOOR $ MP,DENS,6,RHOFLOOR $ MP,C,6,CPFLOOR
+
+! ============================================================
+*IF,SHAPE,EQ,1,THEN
+! ===========================================================
+! DOME / IGLOO (mirrors frontend iglooMat hemisphere)
+! ===========================================================
+  *SET,DOME_R,(SLEN+SWID)*0.25+0.3
+  *SET,DOME_H,SHGT
+  TYPE,1 $ MAT,3
+  CYLIND,0,(DOME_R+0.25),-0.12,0,0,360
+  TYPE,1 $ MAT,6
+  CYLIND,0,(DOME_R-0.1),0,0.12,0,360
+  TYPE,1 $ MAT,1
+  SPHERE,(DOME_R-WTHK),DOME_R,0,90,0,360
+  TYPE,1 $ MAT,1
+  *SET,TUNL,1.4
+  *SET,TUNW,0.9
+  CYLIND,0,TUNW/2,DOME_R,(DOME_R+TUNL),0,180
+
+*ELSE
+! ===========================================================
+! RECTANGULAR HOUSE (mirrors frontend buildWall engine)
+! ===========================================================
+
+  ! 1. Foundation Plinth (Mat 3)
+  TYPE,1 $ MAT,3
+  BLOCK,0,(SLEN+2*WTHK),0,(SWID+2*WTHK),-0.3,0
+
+  ! 2. Floor Slab (Mat 6)
+  TYPE,1 $ MAT,6
+  BLOCK,WTHK,(SLEN+WTHK),WTHK,(SWID+WTHK),0,0.15
+
+  ! 3. North Wall - Solid (Mat 1)
+  TYPE,1 $ MAT,1
+  BLOCK,WTHK,(SLEN+WTHK),(SWID+WTHK),(SWID+2*WTHK),0,SHGT
+
+  ! 4. West Wall - Solid (Mat 1)
+  TYPE,1 $ MAT,1
+  BLOCK,0,WTHK,0,(SWID+2*WTHK),0,SHGT
+
+  ! 5. East Wall - Solid (Mat 1)
+  TYPE,1 $ MAT,1
+  BLOCK,(SLEN+WTHK),(SLEN+2*WTHK),0,(SWID+2*WTHK),0,SHGT
+
+  ! 6. South Wall - Dynamic openings (mirrors frontend layout engine)
+  *SET,MARGIN,0.4
+  *SET,TITEMS,NDOOR+NWIN
+  *SET,DOOR_W,0.9
+  *SET,DOOR_H,2.1
+  *SET,WIN_W,1.2
+  *SET,WIN_H,1.2
+  *SET,WIN_SILL,0.85
+  *SET,WIN_TOP,WIN_SILL+WIN_H
+
+  ! Cursor starts at left margin
+  *SET,CUR,WTHK+MARGIN
+
+  ! Left corner pillar (before door)
+  TYPE,1 $ MAT,1
+  BLOCK,WTHK,CUR,0,WTHK,0,SHGT
+
+  ! DOOR 1
+  *IF,NDOOR,GE,1,THEN
+    *SET,DX1,CUR
+    *SET,DX2,CUR+DOOR_W
+    TYPE,1 $ MAT,5
+    BLOCK,DX1,DX2,(WTHK*0.25),(WTHK*0.75),0,DOOR_H
+    *SET,CUR,DX2+0.35
+  *ENDIF
+
+  ! DOOR 2
+  *IF,NDOOR,GE,2,THEN
+    *SET,DX3,CUR
+    *SET,DX4,CUR+DOOR_W
+    TYPE,1 $ MAT,1
+    BLOCK,DX2,DX3,0,WTHK,0,SHGT
+    TYPE,1 $ MAT,5
+    BLOCK,DX3,DX4,(WTHK*0.25),(WTHK*0.75),0,DOOR_H
+    *SET,CUR,DX4+0.35
+  *ENDIF
+
+  ! Compute window gap
+  *SET,END_X,WTHK+SLEN-MARGIN
+  *SET,WIN_GAP,0.3
+  *IF,NWIN,GT,0,THEN
+    *SET,WIN_GAP,(END_X-CUR-NWIN*WIN_W)/NWIN
+    *IF,WIN_GAP,LT,0.2,THEN
+      *SET,WIN_GAP,0.2
+    *ENDIF
+  *ENDIF
+
+  ! WINDOW 1
+  *SET,PREV_WIN_END,CUR
+  *IF,NWIN,GE,1,THEN
+    *SET,WX1,CUR
+    *SET,WX2,CUR+WIN_W
+    TYPE,1 $ MAT,1
+    BLOCK,PREV_WIN_END,WX1,0,WTHK,0,SHGT
+    BLOCK,WX1,WX2,0,WTHK,0,WIN_SILL
+    TYPE,1 $ MAT,4
+    BLOCK,WX1,WX2,(WTHK*0.35),(WTHK*0.65),WIN_SILL,WIN_TOP
+    *SET,PREV_WIN_END,WX2
+    *SET,CUR,WX2+WIN_GAP
+  *ENDIF
+
+  ! WINDOW 2
+  *IF,NWIN,GE,2,THEN
+    *SET,WX3,CUR
+    *SET,WX4,CUR+WIN_W
+    TYPE,1 $ MAT,1
+    BLOCK,PREV_WIN_END,WX3,0,WTHK,0,SHGT
+    BLOCK,WX3,WX4,0,WTHK,0,WIN_SILL
+    TYPE,1 $ MAT,4
+    BLOCK,WX3,WX4,(WTHK*0.35),(WTHK*0.65),WIN_SILL,WIN_TOP
+    *SET,PREV_WIN_END,WX4
+    *SET,CUR,WX4+WIN_GAP
+  *ENDIF
+
+  ! WINDOW 3
+  *IF,NWIN,GE,3,THEN
+    *SET,WX5,CUR
+    *SET,WX6,CUR+WIN_W
+    TYPE,1 $ MAT,1
+    BLOCK,PREV_WIN_END,WX5,0,WTHK,0,SHGT
+    BLOCK,WX5,WX6,0,WTHK,0,WIN_SILL
+    TYPE,1 $ MAT,4
+    BLOCK,WX5,WX6,(WTHK*0.35),(WTHK*0.65),WIN_SILL,WIN_TOP
+    *SET,PREV_WIN_END,WX6
+    *SET,CUR,WX6
+  *ENDIF
+
+  ! Right corner pillar
+  TYPE,1 $ MAT,1
+  BLOCK,PREV_WIN_END,(SLEN+WTHK),0,WTHK,0,SHGT
+
+  ! Lintel beam above all openings
+  *SET,MAX_OH,DOOR_H
+  *IF,WIN_TOP,GT,DOOR_H,THEN
+    *SET,MAX_OH,WIN_TOP
+  *ENDIF
+  *IF,SHGT-MAX_OH,GT,0.05,THEN
+    TYPE,1 $ MAT,1
+    BLOCK,WTHK,(SLEN+WTHK),0,WTHK,MAX_OH,SHGT
+  *ENDIF
+
+  ! 7. ROOF
+  *IF,ROOFT,EQ,1,THEN
+    ! Gable Pitched Roof (mirrors frontend roofType='pitched')
+    *SET,PH,1.6
+    TYPE,1 $ MAT,2
+    ! South slope
+    BLOCK,-0.4,(SLEN+2*WTHK+0.4),-0.4,(SWID/2+WTHK),SHGT,(SHGT+PH*0.55+0.15)
+    ! North slope
+    BLOCK,-0.4,(SLEN+2*WTHK+0.4),(SWID/2+WTHK),(SWID+2*WTHK+0.4),SHGT,(SHGT+PH*0.55+0.15)
+    ! Ridge cap
+    BLOCK,-0.4,(SLEN+2*WTHK+0.4),(SWID/2+WTHK-0.12),(SWID/2+WTHK+0.12),(SHGT+PH*0.55),(SHGT+PH+0.15)
+    ! Gable end walls
+    TYPE,1 $ MAT,1
+    BLOCK,(SLEN+WTHK),(SLEN+2*WTHK+0.4),-0.4,(SWID+2*WTHK+0.4),SHGT,(SHGT+PH*0.55)
+    BLOCK,-0.4,WTHK,-0.4,(SWID+2*WTHK+0.4),SHGT,(SHGT+PH*0.55)
+    ! Chimney stack (Mat 2)
+    TYPE,1 $ MAT,2
+    BLOCK,(WTHK+1.0),(WTHK+1.5),(WTHK+SWID*0.35),(WTHK+SWID*0.35+0.5),SHGT,(SHGT+PH+0.9)
+  *ELSE
+    ! Flat Roof with Overhang (mirrors roofType='flat')
+    TYPE,1 $ MAT,2
+    BLOCK,-0.3,(SLEN+2*WTHK+0.3),-0.3,(SWID+2*WTHK+0.3),SHGT,(SHGT+0.35)
+  *ENDIF
+
+*ENDIF
+
+! ============================================================
+! MESH
+! ============================================================
+*SET,EMSH,WTHK
+*IF,EMSH,LT,0.35,THEN
+  *SET,EMSH,0.35
+*ENDIF
+ESIZE,EMSH
+VMESH,ALL
+
+! ============================================================
+! GEOMETRY REPORT
+! ============================================================
+*SET,WALL_AREA,2*(SLEN+SWID)*SHGT
+*SET,SOUTH_WALL_AREA,SWID*SHGT
+*SET,ROOF_AREA,SLEN*SWID
+*SET,FLOOR_AREA,SLEN*SWID
+*SET,INT_VOL,SLEN*SWID*SHGT
+*GET,TOTAL_NODES,NODE,,COUNT
+
+! ============================================================
+! VIEW + COLOR SETUP — Front isometric (South facade visible)
+! ============================================================
+ALLSEL,ALL
+FINISH
+/PREP7
+
+! ============================================================
+! MATERIAL COLORS — Exact match with website 3D viewer palette
+! Using /RGB (correct ANSYS command) instead of /COLOR,MAT
+! /RGB,index,R,G,B  — values are 0.0 to 1.0
+! ============================================================
+!   Index 0  = Background     → Dark slate black
+!   Index 1  = Mat 1 Walls    → Mud Brick beige/tan  #C29B74
+!   Index 2  = Mat 2 Roof     → Timber brown         #8B5A2B
+!   Index 3  = Mat 3 Plinth   → Stone dark grey      #475569
+!   Index 4  = Mat 4 Windows  → Glass cyan blue      #60A5FA
+!   Index 5  = Mat 5 Door     → Wood dark brown      #5C3A21
+!   Index 6  = Mat 6 Floor    → Rammed earth         #6E5238
+
+/RGB,0,0.02,0.04,0.08      ! Background: Dark slate
+/RGB,1,0.76,0.61,0.45      ! Mat 1 = Walls:   Mud Brick tan/beige
+/RGB,2,0.55,0.35,0.17      ! Mat 2 = Roof:    Timber brown
+/RGB,3,0.28,0.33,0.41      ! Mat 3 = Plinth:  Stone dark grey
+/RGB,4,0.38,0.65,0.98      ! Mat 4 = Windows: Glass blue
+/RGB,5,0.36,0.23,0.13      ! Mat 5 = Door:    Wood brown
+/RGB,6,0.43,0.32,0.22      ! Mat 6 = Floor:   Rammed earth
+
+! Enable material color numbering (NO numeric labels shown)
+/PNUM,MAT,1
+/NUMBER,0
+/PLOPTS,INFO,3
+/PLOPTS,FRAME,0
+/PLOPTS,LOGO,0
+
+! Isometric view — same angle as website Three.js camera
+/VIEW,1,1,-1,1
+/VUP,1,0,0,1
+/ANG,1,0
+/AUTO,1
+/DIST,1,1.5,1
+/FACET,FINE
+/SHRINK,0.02
+VPLOT
+
+! Export PNG images for website display
+/SHOW,PNG,,0
+PNGR,COMP,1
+PNGR,ORIENT,HORIZ
+/GFILE,1200
+VPLOT
+/SHOW,CLOSE
+
+! FEA Mesh PNG export
+/SHOW,PNG,,0
+EPLOT
+/SHOW,CLOSE
+
+SAVE,shelter_3d,db,,ALL
+/NOPR
+
+*CFOPEN,geometry_out,csv,,APPEND
+*CFWRITE,PARAM,VALUE
+*CFWRITE,length_m,%SLEN%
+*CFWRITE,width_m,%SWID%
+*CFWRITE,height_m,%SHGT%
+*CFWRITE,wall_thickness_m,%WTHK%
+*CFWRITE,num_windows,%NWIN%
+*CFWRITE,num_doors,%NDOOR%
+*CFWRITE,shape_type,%SHAPE%
+*CFWRITE,roof_type,%ROOFT%
+*CFWRITE,wall_area_m2,%WALL_AREA%
+*CFWRITE,south_wall_area_m2,%SOUTH_WALL_AREA%
+*CFWRITE,roof_area_m2,%ROOF_AREA%
+*CFWRITE,floor_area_m2,%FLOOR_AREA%
+*CFWRITE,interior_volume_m3,%INT_VOL%
+*CFWRITE,total_nodes,%TOTAL_NODES%
+*CFCLOS
+
+FINISH
+
+
+*SET,T0,-18.76
+*SET,T_INSIDE_INIT,-18.76
+*SET,GNDTEMP,4.0
+*SET,NHRS,24
+*DIM,TAMB_TB,TABLE,26,1,1,TIME
+*DIM,QSOLS_TB,TABLE,26,1,1,TIME
+*DIM,QSOLR_TB,TABLE,26,1,1,TIME
+*DIM,HEXT_TB,TABLE,26,1,1,TIME
+TAMB_TB(1,0,1)=0 $ TAMB_TB(1,1,1)=-18.76
+QSOLS_TB(1,0,1)=0 $ QSOLS_TB(1,1,1)=0.00
+QSOLR_TB(1,0,1)=0 $ QSOLR_TB(1,1,1)=0.00
+HEXT_TB(1,0,1)=0 $ HEXT_TB(1,1,1)=11.60
+TAMB_TB(2,0,1)=3600 $ TAMB_TB(2,1,1)=-19.28
+QSOLS_TB(2,0,1)=3600 $ QSOLS_TB(2,1,1)=0.00
+QSOLR_TB(2,0,1)=3600 $ QSOLR_TB(2,1,1)=0.00
+HEXT_TB(2,0,1)=3600 $ HEXT_TB(2,1,1)=10.40
+TAMB_TB(3,0,1)=7200 $ TAMB_TB(3,1,1)=-19.79
+QSOLS_TB(3,0,1)=7200 $ QSOLS_TB(3,1,1)=0.00
+QSOLR_TB(3,0,1)=7200 $ QSOLR_TB(3,1,1)=0.00
+HEXT_TB(3,0,1)=7200 $ HEXT_TB(3,1,1)=9.60
+TAMB_TB(4,0,1)=10800 $ TAMB_TB(4,1,1)=-20.00
+QSOLS_TB(4,0,1)=10800 $ QSOLS_TB(4,1,1)=0.00
+QSOLR_TB(4,0,1)=10800 $ QSOLR_TB(4,1,1)=0.00
+HEXT_TB(4,0,1)=10800 $ HEXT_TB(4,1,1)=9.60
+TAMB_TB(5,0,1)=14400 $ TAMB_TB(5,1,1)=-19.79
+QSOLS_TB(5,0,1)=14400 $ QSOLS_TB(5,1,1)=0.00
+QSOLR_TB(5,0,1)=14400 $ QSOLR_TB(5,1,1)=0.00
+HEXT_TB(5,0,1)=14400 $ HEXT_TB(5,1,1)=9.60
+TAMB_TB(6,0,1)=18000 $ TAMB_TB(6,1,1)=-19.28
+QSOLS_TB(6,0,1)=18000 $ QSOLS_TB(6,1,1)=0.00
+QSOLR_TB(6,0,1)=18000 $ QSOLR_TB(6,1,1)=0.00
+HEXT_TB(6,0,1)=18000 $ HEXT_TB(6,1,1)=10.40
+TAMB_TB(7,0,1)=21600 $ TAMB_TB(7,1,1)=-18.24
+QSOLS_TB(7,0,1)=21600 $ QSOLS_TB(7,1,1)=0.00
+QSOLR_TB(7,0,1)=21600 $ QSOLR_TB(7,1,1)=0.00
+HEXT_TB(7,0,1)=21600 $ HEXT_TB(7,1,1)=11.60
+TAMB_TB(8,0,1)=25200 $ TAMB_TB(8,1,1)=-15.65
+QSOLS_TB(8,0,1)=25200 $ QSOLS_TB(8,1,1)=0.00
+QSOLR_TB(8,0,1)=25200 $ QSOLR_TB(8,1,1)=0.00
+HEXT_TB(8,0,1)=25200 $ HEXT_TB(8,1,1)=13.60
+TAMB_TB(9,0,1)=28800 $ TAMB_TB(9,1,1)=-12.55
+QSOLS_TB(9,0,1)=28800 $ QSOLS_TB(9,1,1)=149.52
+QSOLR_TB(9,0,1)=28800 $ QSOLR_TB(9,1,1)=48.31
+HEXT_TB(9,0,1)=28800 $ HEXT_TB(9,1,1)=15.60
+TAMB_TB(10,0,1)=32400 $ TAMB_TB(10,1,1)=-8.41
+QSOLS_TB(10,0,1)=32400 $ QSOLS_TB(10,1,1)=290.97
+QSOLR_TB(10,0,1)=32400 $ QSOLR_TB(10,1,1)=148.12
+HEXT_TB(10,0,1)=32400 $ HEXT_TB(10,1,1)=17.60
+TAMB_TB(11,0,1)=36000 $ TAMB_TB(11,1,1)=-4.26
+QSOLS_TB(11,0,1)=36000 $ QSOLS_TB(11,1,1)=427.27
+QSOLR_TB(11,0,1)=36000 $ QSOLR_TB(11,1,1)=262.99
+HEXT_TB(11,0,1)=36000 $ HEXT_TB(11,1,1)=19.60
+TAMB_TB(12,0,1)=39600 $ TAMB_TB(12,1,1)=-1.16
+QSOLS_TB(12,0,1)=39600 $ QSOLS_TB(12,1,1)=507.66
+QSOLR_TB(12,0,1)=39600 $ QSOLR_TB(12,1,1)=340.74
+HEXT_TB(12,0,1)=39600 $ HEXT_TB(12,1,1)=19.60
+TAMB_TB(13,0,1)=43200 $ TAMB_TB(13,1,1)=1.43
+QSOLS_TB(13,0,1)=43200 $ QSOLS_TB(13,1,1)=541.95
+QSOLR_TB(13,0,1)=43200 $ QSOLR_TB(13,1,1)=373.17
+HEXT_TB(13,0,1)=43200 $ HEXT_TB(13,1,1)=17.60
+TAMB_TB(14,0,1)=46800 $ TAMB_TB(14,1,1)=2.98
+QSOLS_TB(14,0,1)=46800 $ QSOLS_TB(14,1,1)=518.94
+QSOLR_TB(14,0,1)=46800 $ QSOLR_TB(14,1,1)=348.31
+HEXT_TB(14,0,1)=46800 $ HEXT_TB(14,1,1)=17.60
+TAMB_TB(15,0,1)=50400 $ TAMB_TB(15,1,1)=3.50
+QSOLS_TB(15,0,1)=50400 $ QSOLS_TB(15,1,1)=448.37
+QSOLR_TB(15,0,1)=50400 $ QSOLR_TB(15,1,1)=275.98
+HEXT_TB(15,0,1)=50400 $ HEXT_TB(15,1,1)=15.60
+TAMB_TB(16,0,1)=54000 $ TAMB_TB(16,1,1)=1.95
+QSOLS_TB(16,0,1)=54000 $ QSOLS_TB(16,1,1)=319.13
+QSOLR_TB(16,0,1)=54000 $ QSOLR_TB(16,1,1)=162.46
+HEXT_TB(16,0,1)=54000 $ HEXT_TB(16,1,1)=15.60
+TAMB_TB(17,0,1)=57600 $ TAMB_TB(17,1,1)=-0.64
+QSOLS_TB(17,0,1)=57600 $ QSOLS_TB(17,1,1)=173.13
+QSOLR_TB(17,0,1)=57600 $ QSOLR_TB(17,1,1)=55.93
+HEXT_TB(17,0,1)=57600 $ HEXT_TB(17,1,1)=13.60
+TAMB_TB(18,0,1)=61200 $ TAMB_TB(18,1,1)=-3.75
+QSOLS_TB(18,0,1)=61200 $ QSOLS_TB(18,1,1)=0.00
+QSOLR_TB(18,0,1)=61200 $ QSOLR_TB(18,1,1)=0.00
+HEXT_TB(18,0,1)=61200 $ HEXT_TB(18,1,1)=13.60
+TAMB_TB(19,0,1)=64800 $ TAMB_TB(19,1,1)=-6.85
+QSOLS_TB(19,0,1)=64800 $ QSOLS_TB(19,1,1)=0.00
+QSOLR_TB(19,0,1)=64800 $ QSOLR_TB(19,1,1)=0.00
+HEXT_TB(19,0,1)=64800 $ HEXT_TB(19,1,1)=12.80
+TAMB_TB(20,0,1)=68400 $ TAMB_TB(20,1,1)=-9.44
+QSOLS_TB(20,0,1)=68400 $ QSOLS_TB(20,1,1)=0.00
+QSOLR_TB(20,0,1)=68400 $ QSOLR_TB(20,1,1)=0.00
+HEXT_TB(20,0,1)=68400 $ HEXT_TB(20,1,1)=11.60
+TAMB_TB(21,0,1)=72000 $ TAMB_TB(21,1,1)=-12.03
+QSOLS_TB(21,0,1)=72000 $ QSOLS_TB(21,1,1)=0.00
+QSOLR_TB(21,0,1)=72000 $ QSOLR_TB(21,1,1)=0.00
+HEXT_TB(21,0,1)=72000 $ HEXT_TB(21,1,1)=11.60
+TAMB_TB(22,0,1)=75600 $ TAMB_TB(22,1,1)=-14.10
+QSOLS_TB(22,0,1)=75600 $ QSOLS_TB(22,1,1)=0.00
+QSOLR_TB(22,0,1)=75600 $ QSOLR_TB(22,1,1)=0.00
+HEXT_TB(22,0,1)=75600 $ HEXT_TB(22,1,1)=10.80
+TAMB_TB(23,0,1)=79200 $ TAMB_TB(23,1,1)=-16.17
+QSOLS_TB(23,0,1)=79200 $ QSOLS_TB(23,1,1)=0.00
+QSOLR_TB(23,0,1)=79200 $ QSOLR_TB(23,1,1)=0.00
+HEXT_TB(23,0,1)=79200 $ HEXT_TB(23,1,1)=10.40
+TAMB_TB(24,0,1)=82800 $ TAMB_TB(24,1,1)=-17.72
+QSOLS_TB(24,0,1)=82800 $ QSOLS_TB(24,1,1)=0.00
+QSOLR_TB(24,0,1)=82800 $ QSOLR_TB(24,1,1)=0.00
+HEXT_TB(24,0,1)=82800 $ HEXT_TB(24,1,1)=10.40
+TAMB_TB(25,0,1)=86400 $ TAMB_TB(25,1,1)=-18.76
+QSOLS_TB(25,0,1)=86400 $ QSOLS_TB(25,1,1)=0.00
+QSOLR_TB(25,0,1)=86400 $ QSOLR_TB(25,1,1)=0.00
+HEXT_TB(25,0,1)=86400 $ HEXT_TB(25,1,1)=11.60
+! ============================================================
+! TRANSIENT THERMAL FEA — 24-Hour Ladakh Climate Simulation
+! (Called after shelter_design.apdl has built & meshed the geometry)
+! ============================================================
+
+/PREP7
+
+! ============================================================
+! THERMAL BOUNDARY CONDITIONS
+! Exterior surface nodes selection
+! ============================================================
+
+! Select exterior face nodes
+NSEL,S,LOC,Y,-0.31,-0.29          ! Foundation bottom face
+NSEL,A,LOC,X,-0.01, 0.01          ! West outer face
+NSEL,A,LOC,X,(SLEN+2*WTHK-0.01),(SLEN+2*WTHK+0.01)  ! East outer face
+
+! Roof top exterior nodes
+*IF,ROOFT,EQ,1,THEN
+  *SET,ROOF_TOP,SHGT+1.6+0.35
+*ELSE
+  *SET,ROOF_TOP,SHGT+0.35
+*ENDIF
+NSEL,A,LOC,Y,(ROOF_TOP-0.02),(ROOF_TOP+0.05)
+
+! South wall exterior nodes
+NSEL,A,LOC,Z,-0.01,0.01
+
+! North wall exterior nodes
+NSEL,A,LOC,Z,(SWID+2*WTHK-0.01),(SWID+2*WTHK+0.01)
+
+! Save as component for convection BC
+CM,EXT_NODES,NODE
+
+! Apply time-varying convection on all exterior surfaces using passed tables
+SF,EXT_NODES,CONV,%HEXT_TB%,%TAMB_TB%
+
+! Solar flux on South wall exterior
+NSEL,S,LOC,Z,-0.01,0.01
+SF,ALL,HFLUX,%QSOLS_TB%
+
+! Solar flux on Roof
+NSEL,S,LOC,Y,(ROOF_TOP-0.02),(ROOF_TOP+0.05)
+SF,ALL,HFLUX,%QSOLR_TB%
+
+! Ground / Foundation Bottom: Constant deep-ground temp (4°C Ladakh)
+NSEL,S,LOC,Y,-0.32,-0.28
+D,ALL,TEMP,GNDTEMP
+
+! Interior Air Convection
+NSEL,ALL
+NSEL,S,LOC,Z,(WTHK*0.4),(WTHK*0.6)
+NSEL,A,LOC,Z,(SWID+WTHK*1.4),(SWID+WTHK*1.6)
+NSEL,A,LOC,X,(WTHK*0.4),(WTHK*0.6)
+NSEL,A,LOC,X,(SLEN+WTHK*1.4),(SLEN+WTHK*1.6)
+SF,ALL,CONV,4.0,T_INSIDE_INIT
+
+ALLSEL,ALL
+
+! Initial Temperature Condition
+IC,ALL,TEMP,T0
+
+! ============================================================
+! TRANSIENT THERMAL SOLVER SETTINGS
+! ============================================================
+FINISH
+/SOLU
+
+ANTYPE,TRANS          ! Transient thermal analysis
+TRNOPT,FULL           ! Full transient
+TIMINT,ON             ! Time integration ON
+KBC,0                 ! Ramped loading between time steps
+
+DELTIM,3600,600,3600  ! Time step: 1 hour (3600 s)
+OUTRES,ALL,ALL        ! Save all results every sub-step
+NSUBST,1,6,1
+
+! Solve 24 time steps (24 hours)
+*DO,IHOUR,1,NHRS
+  TIME,IHOUR*3600
+  SOLVE
+*ENDDO
+
+FINISH
+
+! ============================================================
+! POST-PROCESSING: Extract Temperature Results
+! ============================================================
+/POST1
+
+! Read last time step
+SET,LAST
+
+! Get temperature extremes
+*GET,T_MAX_ALL,NODE,0,TEMP,MAX
+*GET,T_MIN_ALL,NODE,0,TEMP,MIN
+*GET,T_AVG_ALL,NODE,0,TEMP,MEAN
+
+! Interior core nodes
+NSEL,S,LOC,X,(WTHK+0.3),(WTHK+SLEN-0.3)
+NSEL,R,LOC,Z,(WTHK+0.3),(WTHK+SWID-0.3)
+NSEL,R,LOC,Y,0.2,(SHGT-0.2)
+*GET,T_INT_MAX,NODE,0,TEMP,MAX
+*GET,T_INT_MIN,NODE,0,TEMP,MIN
+*GET,T_INT_AVG,NODE,0,TEMP,MEAN
+ALLSEL,ALL
+
+! South wall inner surface temperature
+NSEL,S,LOC,Z,(WTHK*0.85),(WTHK*1.15)
+NSEL,R,LOC,Y,0.5,(SHGT*0.8)
+*GET,T_SWALL_IN,NODE,0,TEMP,MEAN
+ALLSEL,ALL
+
+! ============================================================
+! Write thermal results CSV
+! ============================================================
+*CFOPEN,thermal_out,csv,,APPEND
+*CFWRITE,PARAM,VALUE
+*CFWRITE,peak_inside_temp_C,%T_INT_MAX%
+*CFWRITE,min_inside_temp_C,%T_INT_MIN%
+*CFWRITE,avg_inside_temp_C,%T_INT_AVG%
+*CFWRITE,max_any_temp_C,%T_MAX_ALL%
+*CFWRITE,min_any_temp_C,%T_MIN_ALL%
+*CFWRITE,south_wall_inner_temp_C,%T_SWALL_IN%
+
+! Extract 24 hourly interior temperature steps from FEA database
+*DO,IH,1,NHRS
+  SET,IH
+  NSEL,S,LOC,X,(WTHK+0.3),(WTHK+SLEN-0.3)
+  NSEL,R,LOC,Z,(WTHK+0.3),(WTHK+SWID-0.3)
+  NSEL,R,LOC,Y,0.2,(SHGT-0.2)
+  *GET,T_HR_VAL,NODE,0,TEMP,MEAN
+  ALLSEL,ALL
+  *CFWRITE,hour_%IH%,%T_HR_VAL%
+*ENDDO
+
+*CFCLOS
+
+FINISH
+/EOF

@@ -1,0 +1,31 @@
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       01:22:19
+
+ *** ERROR ***                           ELAPSED TIME =       5.679   TIME= 01:22:21
+ The x-distances are the same within the tolerance.                      
+  Can not create the hexahedral volume.                                  
+
+ *** WARNING ***                         ELAPSED TIME =       5.679   TIME= 01:22:21
+ WHILE PROCESSING FILE BASED INPUT (/INPUT OR MACRO) AN ERROR HAS        
+ OCCURRED.  SHOULD INPUT PROCESSING BE SUSPENDED?                        
+
+ *** WARNING ***                         ELAPSED TIME =       5.707   TIME= 01:22:21
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.707   TIME= 01:22:21
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.708   TIME= 01:22:21
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.708   TIME= 01:22:21
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.708   TIME= 01:22:21
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.709   TIME= 01:22:21
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.903   TIME= 01:22:21
+ Display device cannot be changed from the WIN32 driver.  The            
+ "/SHOW,CLOSE" command is ignored.                                       

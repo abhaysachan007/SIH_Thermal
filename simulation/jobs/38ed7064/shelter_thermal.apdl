@@ -1,0 +1,205 @@
+
+! ============================================================
+! TRANSIENT THERMAL FEA — 24-Hour Ladakh Climate Simulation
+! (Called after shelter_design.apdl has built & meshed the geometry)
+!
+! Parameters inherited from run_design.apdl header:
+!   SLEN, SWID, SHGT, WTHK, SHAPE
+!   H_EXT_*  - Exterior convection coefficient per hour (array)
+!   T_AMB_*  - Hourly ambient temperature (°C)
+!   Q_SOL_S_*- Hourly solar flux on South wall (W/m²)
+!   Q_SOL_R_*- Hourly solar flux on Roof (W/m²)
+!   T0       - Initial interior temperature (°C)
+!   NHRS     - Number of hours to simulate (default 24)
+! ============================================================
+
+/PREP7
+
+! ============================================================
+! THERMAL BOUNDARY CONDITIONS
+! Apply to exterior surfaces by component names
+! ============================================================
+
+! --- Define time-temperature table for ambient (TABVAL) ---
+! We use APDL *DIM table arrays for time-varying BCs
+! Hours 0-23, time in seconds (0 to 86400)
+*DIM,TAMB,TABLE,25,1,1,TIME
+*DIM,QSOL_S,TABLE,25,1,1,TIME
+*DIM,QSOL_R,TABLE,25,1,1,TIME
+*DIM,HEXT,TABLE,25,1,1,TIME
+
+! Fill tables from injected hourly parameters
+*DO,IH,0,24
+  TAMB(IH+1,0,1)   = IH*3600
+  TAMB(IH+1,1,1)   = T_AMB_IH
+  QSOL_S(IH+1,0,1) = IH*3600
+  QSOL_S(IH+1,1,1) = Q_SOL_S_IH
+  QSOL_R(IH+1,0,1) = IH*3600
+  QSOL_R(IH+1,1,1) = Q_SOL_R_IH
+  HEXT(IH+1,0,1)   = IH*3600
+  HEXT(IH+1,1,1)   = H_EXT_IH
+*ENDDO
+
+! ============================================================
+! Select exterior face nodes for each surface
+! Strategy: use NSEL by coordinate ranges
+! ============================================================
+
+! --- South Exterior Surface (Z = 0 face of south wall, or equivalent) ---
+NSEL,S,LOC,Y,-0.31,-0.29          ! Foundation bottom face
+NSEL,A,LOC,X,-0.01, 0.01          ! West outer face
+NSEL,A,LOC,X,(SLEN+2*WTHK-0.01),(SLEN+2*WTHK+0.01)  ! East outer face
+
+! All exterior roof nodes (top of roof)
+*IF,ROOFT,EQ,1,THEN
+  *SET,ROOF_TOP,SHGT+1.6+0.35
+*ELSE
+  *SET,ROOF_TOP,SHGT+0.35
+*ENDIF
+NSEL,A,LOC,Y,(ROOF_TOP-0.02),(ROOF_TOP+0.05)
+
+! South wall exterior nodes
+NSEL,A,LOC,Z,-0.01,0.01
+
+! North wall exterior nodes
+NSEL,A,LOC,Z,(SWID+2*WTHK-0.01),(SWID+2*WTHK+0.01)
+
+! Save as component for convection BC
+CM,EXT_NODES,NODE
+
+! ============================================================
+! Apply time-varying convection on all exterior surfaces
+! CONV,HFILM,TBULK  (h in W/m²K, T_bulk as table)
+! ============================================================
+SF,EXT_NODES,CONV,%HEXT%,%TAMB%
+
+! --- Solar flux on South wall exterior ---
+NSEL,S,LOC,Z,-0.01,0.01
+SF,ALL,HFLUX,%QSOL_S%
+
+! --- Solar flux on Roof ---
+NSEL,S,LOC,Y,(ROOF_TOP-0.02),(ROOF_TOP+0.05)
+SF,ALL,HFLUX,%QSOL_R%
+
+! --- Ground / Foundation Bottom: Constant deep-ground temp (4°C Ladakh) ---
+NSEL,S,LOC,Y,-0.32,-0.28
+D,ALL,TEMP,GNDTEMP
+
+! --- Interior Air Convection: Interior surface nodes ---
+NSEL,ALL
+NSEL,S,LOC,Z,(WTHK*0.4),(WTHK*0.6)          ! Approx interior
+NSEL,A,LOC,Z,(SWID+WTHK*1.4),(SWID+WTHK*1.6)
+NSEL,A,LOC,X,(WTHK*0.4),(WTHK*0.6)
+NSEL,A,LOC,X,(SLEN+WTHK*1.4),(SLEN+WTHK*1.6)
+SF,ALL,CONV,4.0,T_INSIDE_INIT
+
+ALLSEL,ALL
+
+! ============================================================
+! INITIAL TEMPERATURE CONDITION
+! ============================================================
+IC,ALL,TEMP,T0
+
+! ============================================================
+! TRANSIENT THERMAL SOLVER SETTINGS
+! ============================================================
+FINISH
+/SOLU
+
+ANTYPE,TRANS          ! Transient thermal analysis
+TRNOPT,FULL           ! Full transient (not reduced)
+TIMINT,ON             ! Time integration ON
+KBC,0                 ! Ramped loading between time steps
+
+! Time stepping: 1 hour intervals, auto-bisect for convergence
+DELTIM,3600,600,3600  ! delta_t=1h, min=10min, max=1h
+OUTRES,ALL,ALL        ! Save all results every sub-step
+
+NSUBST,1,6,1          ! 1 substep per time step, max 6
+
+! Solve 24 time steps (24 hours)
+*DO,IHOUR,1,NHRS
+  TIME,IHOUR*3600     ! Advance time by 1 hour
+  SOLVE
+*ENDDO
+
+FINISH
+
+! ============================================================
+! POST-PROCESSING: Extract Temperature Results
+! ============================================================
+/POST26
+! Time-history of maximum interior temperature node
+! Interior node: center of building
+*GET,XCTR,NODE,,NUM,MIN  ! placeholder
+NSEL,S,LOC,X,(WTHK+SLEN/2-0.3),(WTHK+SLEN/2+0.3)
+NSEL,R,LOC,Z,(WTHK+SWID/2-0.3),(WTHK+SWID/2+0.3)
+NSEL,R,LOC,Y,(SHGT/2-0.5),(SHGT/2+0.5)
+*GET,CTRNODE,NODE,,NUM,MIN
+ALLSEL,ALL
+
+NSOL,2,CTRNODE,TEMP,,TEMP_INTERIOR
+STORE,MERGE
+
+! ============================================================
+! Post: Nodal temperature statistics
+! ============================================================
+/POST1
+SET,LAST           ! Read last time step
+
+! Get temperature extremes
+*GET,T_MAX_ALL,NODE,0,TEMP,MAX
+*GET,T_MIN_ALL,NODE,0,TEMP,MIN
+*GET,T_AVG_ALL,NODE,0,TEMP,MEAN
+
+! Interior nodes (approximately)
+NSEL,S,LOC,X,(WTHK+0.3),(WTHK+SLEN-0.3)
+NSEL,R,LOC,Z,(WTHK+0.3),(WTHK+SWID-0.3)
+NSEL,R,LOC,Y,0.2,(SHGT-0.2)
+*GET,T_INT_MAX,NODE,0,TEMP,MAX
+*GET,T_INT_MIN,NODE,0,TEMP,MIN
+*GET,T_INT_AVG,NODE,0,TEMP,MEAN
+ALLSEL,ALL
+
+! South wall inner surface temperature (comfort indicator)
+NSEL,S,LOC,Z,(WTHK*0.85),(WTHK*1.15)
+NSEL,R,LOC,Y,0.5,2.5
+*GET,T_SWALL_IN,NODE,0,TEMP,MEAN
+ALLSEL,ALL
+
+! Temperature contour plots - same camera as geometry (South facade view)
+/VIEW,1,1.2,-1.8,1.0
+/VUP,1,Z
+/AUTO,1
+/PLOPTS,INFO,1
+/CONTOUR,1,8,-25,5,30    ! Temperature contour from -25°C to +30°C
+/PNUM,0
+/UDOC,1,CNTR,1
+
+/SHOW,PNG,,0
+PNGR,COMP,1
+PNGR,ORIENT,HORIZ
+/GFILE,1200
+PLNSOL,TEMP,,0,1     ! Nodal temperature contour (FLIR-style)
+/SHOW,CLOSE
+
+! Heat Flux vector plot
+/SHOW,PNG,,0
+PLVECT,TF,,,,VECT,NODE,1,0
+/SHOW,CLOSE
+
+! ============================================================
+! Write thermal results CSV (read back by Python backend)
+! ============================================================
+*CFOPEN,thermal_out,csv,,APPEND
+*CFWRITE,PARAM,VALUE
+*CFWRITE,peak_inside_temp_C,%T_INT_MAX%
+*CFWRITE,min_inside_temp_C,%T_INT_MIN%
+*CFWRITE,avg_inside_temp_C,%T_INT_AVG%
+*CFWRITE,max_any_temp_C,%T_MAX_ALL%
+*CFWRITE,min_any_temp_C,%T_MIN_ALL%
+*CFWRITE,south_wall_inner_temp_C,%T_SWALL_IN%
+*CFCLOSE
+
+FINISH
+/EOF

@@ -1,0 +1,61 @@
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       13:16:00
+
+ *** ERROR ***                           ELAPSED TIME =       5.731   TIME= 13:16:01
+ The x-distances are the same within the tolerance.                      
+  Can not create the hexahedral volume.                                  
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       13:16:40
+
+ *** ERROR ***                           ELAPSED TIME =       5.657   TIME= 13:16:42
+ The x-distances are the same within the tolerance.                      
+  Can not create the hexahedral volume.                                  
+
+ *** WARNING ***                         ELAPSED TIME =       5.658   TIME= 13:16:42
+ WHILE PROCESSING FILE BASED INPUT (/INPUT OR MACRO) AN ERROR HAS        
+ OCCURRED.  SHOULD INPUT PROCESSING BE SUSPENDED?                        
+
+ *** WARNING ***                         ELAPSED TIME =       5.723   TIME= 13:16:42
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.723   TIME= 13:16:42
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.724   TIME= 13:16:42
+ Invalid color identifier specified in /COLOR command.                   
+
+ *** WARNING ***                         ELAPSED TIME =       5.724   TIME= 13:16:42
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.724   TIME= 13:16:42
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.724   TIME= 13:16:42
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.725   TIME= 13:16:42
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.850   TIME= 13:16:42
+ Display device cannot be changed from the WIN32 driver.  The            
+ "/SHOW,CLOSE" command is ignored.                                       
+
+ *** WARNING ***                         ELAPSED TIME =       5.851   TIME= 13:16:42
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.851   TIME= 13:16:42
+ Invalid color identifier specified in /COLOR command.                   
+
+ *** WARNING ***                         ELAPSED TIME =       5.851   TIME= 13:16:42
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.851   TIME= 13:16:42
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.851   TIME= 13:16:42
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.851   TIME= 13:16:42
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.983   TIME= 13:16:42
+ Display device cannot be changed from the WIN32 driver.  The            
+ "/SHOW,CLOSE" command is ignored.                                       

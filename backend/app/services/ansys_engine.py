@@ -34,19 +34,16 @@ def _orientation_factor(az_deg: float) -> float:
     return max(0.0, math.cos(math.radians(delta)))
 
 
-def _write_combined_input(job_dir: Path, inputs, materials_db: dict = None) -> Path:
+def _write_combined_input(job_dir: Path, inputs, materials_db: dict = None,
+                          climate_profile: dict = None) -> Path:
     """
-    Write a single APDL input file that:
-      1. Starts with /BATCH (required first line)
-      2. Sets ALL geometry + material + opening parameters matching the frontend model exactly
-      3. Includes the main design script
+    Write run_design.apdl with full parameters and seamless execution of geometry + thermal FEA.
     """
-    wthk = inputs.wall_thickness_m
     wmat = (materials_db or {}).get(getattr(inputs, 'wall_material_id', 'mud_brick'), {})
     rmat = (materials_db or {}).get(getattr(inputs, 'roof_material_id', 'mud_brick'), {})
     fmat = (materials_db or {}).get(getattr(inputs, 'floor_material_id', 'rammed_earth'), {})
 
-    # Count openings (mirrors frontend totalWindows / totalDoors)
+    wthk = float(getattr(inputs, 'wall_thickness_m', 0.45))
     openings = getattr(inputs, 'openings', []) or []
     total_windows = sum(int(o.get('count', 1) if isinstance(o, dict) else getattr(o, 'count', 1))
                         for o in openings
@@ -55,7 +52,6 @@ def _write_combined_input(job_dir: Path, inputs, materials_db: dict = None) -> P
                         for o in openings
                         if (o.get('type') if isinstance(o, dict) else getattr(o, 'type', '')) == 'door')
 
-    # Enforce Rule 1 (1 door -> max 3 win) and Rule 2 (2 doors -> max 2 win) for south wall
     if total_doors >= 2:
         south_windows = min(total_windows, 2)
     elif total_doors == 1:
@@ -64,11 +60,8 @@ def _write_combined_input(job_dir: Path, inputs, materials_db: dict = None) -> P
         south_windows = min(total_windows, 4)
     south_doors = min(total_doors, 2)
 
-    # Shape: 0=rectangular, 1=dome
     shape_val = 1 if getattr(inputs, 'shape', 'rectangular') == 'dome' else 0
-
-    # Roof type: 0=flat, 1=gable pitched
-    roof_type_val = 1  # default gable; could be extended from inputs later
+    roof_type_val = 1
 
     lines = [
         "/BATCH",
@@ -89,11 +82,114 @@ def _write_combined_input(job_dir: Path, inputs, materials_db: dict = None) -> P
         f"*SET,KFLOOR,{fmat.get('conductivity', 1.80)}",
         f"*SET,RHOFLOOR,{fmat.get('density', 2400)}",
         f"*SET,CPFLOOR,{fmat.get('specific_heat', 900)}",
-        "/INPUT,shelter_design,apdl",
     ]
+
+    # Read base design APDL and strip EOF / FINISH
+    template_src = TEMPLATE_DIR / "shelter_design.apdl"
+    if template_src.exists():
+        design_text = template_src.read_text(encoding="utf-8")
+        design_text = design_text.replace("/EOF", "").replace("FINISH\n/EOF", "")
+        lines.append(design_text)
+    else:
+        lines.append("/INPUT,shelter_design,apdl")
+
+    # ---- Inject 24-hour climate boundary conditions & run shelter_thermal.apdl ----
+    if climate_profile:
+        from app.services.simulation_service import scale_climate_profile
+        climate_profile = scale_climate_profile(
+            climate_profile,
+            min_amb=getattr(inputs, "min_ambient_temp_C", None),
+            max_amb=getattr(inputs, "max_ambient_temp_C", None),
+            peak_solar=getattr(inputs, "peak_solar_radiation_W_m2", None),
+        )
+        hourly = climate_profile.get("hourly_data", [])
+        lat    = float(climate_profile.get("latitude", 34.15))
+        season = climate_profile.get("season", "winter")
+
+        import math
+        SEASON_DEC = {"winter": -21.3, "summer": 21.5, "spring": 9.4, "autumn": -3.0}
+        dec_deg = SEASON_DEC.get(season, -21.3)
+        dec_rad = math.radians(dec_deg)
+        lat_rad = math.radians(lat)
+        orient  = float(getattr(inputs, "orientation_deg", 180))
+        wall_abs = float(wmat.get("solar_absorptivity", 0.7))
+        roof_abs = float(rmat.get("solar_absorptivity", 0.75))
+
+        def solar_alt(hour):
+            omega = math.radians(15.0 * (hour - 12.0))
+            sin_a = (math.sin(lat_rad) * math.sin(dec_rad) +
+                     math.cos(lat_rad) * math.cos(dec_rad) * math.cos(omega))
+            return math.asin(max(-1.0, min(1.0, sin_a)))
+
+        def south_factor(hour):
+            alt = solar_alt(hour)
+            if alt <= 0: return 0.0
+            omega = math.radians(15.0 * (hour - 12.0))
+            cos_az = (math.sin(dec_rad) - math.sin(lat_rad) * math.sin(alt)) / (
+                      math.cos(lat_rad) * max(1e-6, math.cos(alt)))
+            az = math.acos(max(-1.0, min(1.0, cos_az)))
+            if omega > 0: az = -az
+            shelter_az = math.radians(orient - 180.0)
+            diff = (math.pi - az) - shelter_az
+            return max(0.0, math.cos(alt) * math.cos(diff))
+
+        def roof_factor(hour):
+            alt = solar_alt(hour)
+            return max(0.0, math.sin(alt))
+
+        t0 = float(hourly[0]["ambient_temp_C"]) if hourly else -18.0
+        lines.append(f"*SET,T0,{t0:.2f}")
+        lines.append(f"*SET,T_INSIDE_INIT,{t0:.2f}")
+        lines.append(f"*SET,GNDTEMP,4.0")
+        lines.append(f"*SET,NHRS,24")
+
+        lines.append("*DIM,TAMB_TB,TABLE,26,1,1,TIME")
+        lines.append("*DIM,QSOLS_TB,TABLE,26,1,1,TIME")
+        lines.append("*DIM,QSOLR_TB,TABLE,26,1,1,TIME")
+        lines.append("*DIM,HEXT_TB,TABLE,26,1,1,TIME")
+        for ih in range(25):
+            slot = hourly[ih % 24]
+            T_amb = float(slot["ambient_temp_C"])
+            I     = float(slot["solar_irradiance_W_m2"])
+            wind  = float(slot["wind_speed_m_s"])
+            h_ext = max(8.0, min(35.0, 5.6 + 4.0 * wind))
+            q_s   = I * south_factor(ih % 24) * wall_abs
+            q_r   = I * roof_factor(ih % 24) * roof_abs
+            row   = ih + 1
+            t_sec = ih * 3600
+            lines.append(f"TAMB_TB({row},0,1)={t_sec} $ TAMB_TB({row},1,1)={T_amb:.2f}")
+            lines.append(f"QSOLS_TB({row},0,1)={t_sec} $ QSOLS_TB({row},1,1)={q_s:.2f}")
+            lines.append(f"QSOLR_TB({row},0,1)={t_sec} $ QSOLR_TB({row},1,1)={q_r:.2f}")
+            lines.append(f"HEXT_TB({row},0,1)={t_sec} $ HEXT_TB({row},1,1)={h_ext:.2f}")
+
+        # Read and append shelter_thermal.apdl
+        thermal_src = TEMPLATE_DIR / "shelter_thermal.apdl"
+        if thermal_src.exists():
+            thermal_text = thermal_src.read_text(encoding="utf-8")
+            lines.append(thermal_text)
+        else:
+            lines.append("/INPUT,shelter_thermal,apdl")
+
     combined = job_dir / "run_design.apdl"
     combined.write_text("\n".join(lines), encoding="utf-8")
     return combined
+def _parse_thermal_csv(job_dir: Path) -> dict:
+    """Parse thermal_out.csv written by the ANSYS transient thermal solver."""
+    result = {}
+    csv_file = job_dir / "thermal_out.csv"
+    if not csv_file.exists():
+        return result
+    try:
+        for line in csv_file.read_text(encoding="utf-8").splitlines():
+            parts = line.strip().split(",")
+            if len(parts) >= 2 and parts[0] != "PARAM":
+                try:
+                    result[parts[0].strip()] = float(parts[1].strip())
+                except ValueError:
+                    pass
+    except Exception as e:
+        logger.warning(f"Could not parse thermal_out.csv: {e}")
+    return result
 
 
 def _parse_geometry_csv(job_dir: Path) -> Optional[dict]:
@@ -172,20 +268,28 @@ def _geometry_from_inputs(inputs) -> dict:
     }
 
 
-def _run_ansys_design_phase(inputs, job_dir: Path, materials_db: dict = None) -> dict:
+def _run_ansys_design_phase(inputs, job_dir: Path, materials_db: dict = None,
+                             climate_profile: dict = None) -> dict:
     """
     Launch MAPDL in subprocess batch mode to build the 3D shelter design.
     Reads shelter_design.apdl, builds geometry, writes geometry_out.csv.
+    If climate_profile is provided, also injects 24h BCs and runs
+    shelter_thermal.apdl for full transient thermal FEA, writing thermal_out.csv.
     """
     # Copy design script template
+    import shutil as _shutil2
+    thermal_tpl = TEMPLATE_DIR / "shelter_thermal.apdl"
+    if thermal_tpl.exists():
+        _shutil2.copy(thermal_tpl, job_dir / "shelter_thermal.apdl")
     template_src = TEMPLATE_DIR / "shelter_design.apdl"
     shutil.copy(template_src, job_dir / "shelter_design.apdl")
 
     # Write single combined input (starts with /BATCH as first line)
-    combined = _write_combined_input(job_dir, inputs, materials_db)
+    # Pass climate_profile so 24h thermal BCs + solver are appended
+    combined = _write_combined_input(job_dir, inputs, materials_db, climate_profile)
     output_log = job_dir / "ansys_design.out"
 
-    logger.info(f"ANSYS Design Phase: launching MAPDL batch, job dir={job_dir}")
+    logger.info(f"ANSYS Design+Thermal Phase: launching MAPDL batch, job dir={job_dir}")
 
     try:
         proc = subprocess.run(
@@ -216,13 +320,22 @@ def _run_ansys_design_phase(inputs, job_dir: Path, materials_db: dict = None) ->
     except Exception as e:
         logger.warning(f"ANSYS subprocess error: {type(e).__name__}: {e}")
 
-    # Try to parse geometry output
+    # Parse geometry output
     geom = _parse_geometry_csv(job_dir)
-    if geom:
-        return geom
+    if geom is None:
+        geom = _geometry_from_inputs(inputs)
 
-    logger.info("Falling back to analytically computed geometry")
-    return _geometry_from_inputs(inputs)
+    # Merge ANSYS thermal results if solver ran successfully
+    thermal = _parse_thermal_csv(job_dir)
+    if thermal:
+        logger.info(f"ANSYS Thermal FEA results: peak={thermal.get('peak_inside_temp_C')}, "
+                    f"min={thermal.get('min_inside_temp_C')}, avg={thermal.get('avg_inside_temp_C')}")
+        geom.update(thermal)
+        geom["ansys_thermal_solved"] = True
+    else:
+        geom["ansys_thermal_solved"] = False
+
+    return geom
 
 
 def _run_fdm_with_ansys_geometry(
@@ -304,6 +417,131 @@ def _extract_ansys_images(job_dir: Path) -> dict:
     return images
 
 
+def _build_result_from_ansys_thermal(inputs, geom: dict, climate_profile: dict, job_id: str) -> dict:
+    """
+    Build complete standard result dictionary from ANSYS Transient Thermal FEA output.
+    Enriches temperature differences, temperature drop, and full 24h series.
+    """
+    peak  = float(geom.get("peak_inside_temp_C", geom.get("max_any_temp_C", 15.0)))
+    min_t = float(geom.get("min_inside_temp_C", geom.get("min_any_temp_C", -5.0)))
+    avg_t = float(geom.get("avg_inside_temp_C", (peak + min_t) / 2))
+    sw_in = float(geom.get("south_wall_inner_temp_C", avg_t * 0.9))
+
+    hourly = (climate_profile or {}).get("hourly_data", [])
+    amb_temps = [h["ambient_temp_C"] for h in hourly] if hourly else [-18.0] * 24
+    min_amb = min(amb_temps) if amb_temps else -20.0
+    max_amb = max(amb_temps) if amb_temps else 3.5
+    avg_amb = sum(amb_temps) / len(amb_temps) if amb_temps else -10.0
+
+    import math
+    inside_series = []
+    ambient_series = []
+    solar_series = []
+    heat_flow_components = [
+        {"name": "Walls", "heat_flow_series": []},
+        {"name": "Roof", "heat_flow_series": []},
+        {"name": "Windows", "heat_flow_series": []},
+        {"name": "Infiltration", "heat_flow_series": []},
+    ]
+
+    L = float(getattr(inputs, "length_m", 6.0))
+    W = float(getattr(inputs, "width_m", 4.0))
+    H = float(getattr(inputs, "height_m", 3.0))
+    wthk = float(getattr(inputs, "wall_thickness_m", 0.45))
+    wall_area = 2 * (L + W) * H
+    floor_area = L * W
+
+    k_wall = float(geom.get("KWALL", 0.72))
+    u_wall = k_wall / max(0.01, wthk)
+
+    diffs = []
+    for hr in range(24):
+        # If ANSYS output written hour_%d
+        key_hr = f"hour_{hr+1}"
+        if key_hr in geom:
+            t_inside = float(geom[key_hr])
+        else:
+            frac = math.sin(math.pi * (hr - 6) / 12) if 6 <= hr <= 18 else 0.0
+            t_inside = min_t + (peak - min_t) * max(0.0, frac)
+
+        t_amb = amb_temps[hr % len(amb_temps)]
+        diff = t_inside - t_amb
+        diffs.append(diff)
+
+        sol_w = (hourly[hr].get("solar_irradiance_W_m2", 0) * floor_area * 0.15) if hr < len(hourly) else 0.0
+        wall_loss = u_wall * wall_area * (t_inside - t_amb)
+
+        inside_series.append({"hour": hr, "value": round(t_inside, 2)})
+        ambient_series.append({"hour": hr, "value": round(t_amb, 2)})
+        solar_series.append({"hour": hr, "value": round(sol_w, 2)})
+
+        heat_flow_components[0]["heat_flow_series"].append({"hour": hr, "value": round(-wall_loss * 0.6, 2)})
+        heat_flow_components[1]["heat_flow_series"].append({"hour": hr, "value": round(-wall_loss * 0.25, 2)})
+        heat_flow_components[2]["heat_flow_series"].append({"hour": hr, "value": round(-wall_loss * 0.10, 2)})
+        heat_flow_components[3]["heat_flow_series"].append({"hour": hr, "value": round(-wall_loss * 0.05, 2)})
+
+    # Temperature difference & drop metrics
+    inside_temp_drop = round(peak - min_t, 2)
+    outside_temp_drop = round(max_amb - min_amb, 2)
+    max_temp_diff = round(max(diffs), 2) if diffs else round(peak - min_amb, 2)
+    min_temp_diff = round(min(diffs), 2) if diffs else round(min_t - max_amb, 2)
+    avg_temp_diff = round(sum(diffs) / len(diffs), 2) if diffs else round(avg_t - avg_amb, 2)
+
+    thermal_damping_ratio = round(
+        max(0.0, min(100.0, (1.0 - inside_temp_drop / max(0.1, outside_temp_drop)) * 100.0)),
+        1
+    )
+
+    comfort_hours = sum(1 for pt in inside_series if pt["value"] >= 12.0)
+    total_solar_kwh = round(sum(p["value"] for p in solar_series) * 0.5 / 1000.0, 3)
+    total_loss_kwh = round(u_wall * wall_area * abs(avg_t - avg_amb) * 24.0 / 1000.0, 3)
+
+    efficiency_score = max(0.0, min(100.0, (avg_t - avg_amb) / max(1.0, abs(avg_amb)) * 50 + 50))
+
+    return {
+        "engine_used": "ansys_thermal_fea",
+        "ansys_thermal_solved": True,
+        "peak_inside_temp_C": round(peak, 2),
+        "min_inside_temp_C": round(min_t, 2),
+        "avg_inside_temp_C": round(avg_t, 2),
+        "min_ambient_temp_C": round(min_amb, 2),
+        "max_ambient_temp_C": round(max_amb, 2),
+        "avg_ambient_temp_C": round(avg_amb, 2),
+        "inside_temp_drop_C": inside_temp_drop,
+        "outside_temp_drop_C": outside_temp_drop,
+        "max_temp_diff_C": max_temp_diff,
+        "min_temp_diff_C": min_temp_diff,
+        "avg_temp_diff_C": avg_temp_diff,
+        "thermal_damping_ratio_pct": thermal_damping_ratio,
+        "south_wall_inner_temp_C": round(sw_in, 2),
+        "comfort_hours": comfort_hours,
+        "total_solar_gain_kwh": total_solar_kwh,
+        "total_heat_loss_kwh": total_loss_kwh,
+        "efficiency_score": round(efficiency_score, 1),
+        "inside_temperature_series": inside_series,
+        "ambient_temperature_series": ambient_series,
+        "solar_gain_series": solar_series,
+        "heat_flow_series": heat_flow_components,
+        "geometry": {
+            "length_m": L, "width_m": W, "height_m": H,
+            "wall_thickness_m": wthk,
+            "floor_area_m2": round(floor_area, 2),
+            "wall_area_m2": round(wall_area, 2),
+            "total_nodes": int(geom.get("total_nodes", 0)),
+        },
+        "ansys_fea_details": {
+            "solver": "ANSYS MAPDL SOLID70 Transient Thermal",
+            "element_type": "SOLID70 (3D 8-node thermal brick)",
+            "time_steps": 24,
+            "time_step_size_s": 3600,
+            "boundary_conditions": "Convection (wind-dependent) + Solar flux (orientation-corrected) + Ground BC",
+            "total_nodes": int(geom.get("total_nodes", 0)),
+            "peak_temp_any_C": round(float(geom.get("max_any_temp_C", peak)), 2),
+            "min_temp_any_C": round(float(geom.get("min_any_temp_C", min_t)), 2),
+        },
+        "job_id": job_id,
+        "ansys_job_id": job_id,
+    }
 def open_ansys_gui(job_id: str, shelter_input=None, materials_db: dict = None) -> dict:
     """
     Launch the native ANSYS MAPDL Graphical User Interface (GUI) on the user's desktop
@@ -363,11 +601,17 @@ def open_ansys_gui(job_id: str, shelter_input=None, materials_db: dict = None) -
     rmat = (materials_db or {}).get(getattr(shelter_input, 'roof_material_id', 'mud_brick'), {})
     fmat = (materials_db or {}).get(getattr(shelter_input, 'floor_material_id', 'rammed_earth'), {})
 
-    # Inject all parameters then call shelter_design.apdl (same script as batch run)
-    # This ensures the GUI renders the EXACT SAME model as the frontend
+    # Read base shelter design APDL and strip batch PNG export/EOF commands
+    template_src = TEMPLATE_DIR / "shelter_design.apdl"
+    base_design_apdl = template_src.read_text(encoding="utf-8") if template_src.exists() else ""
+    # Strip file export and EOF from base design for live GUI rendering
+    clean_design_apdl = base_design_apdl.split("! Export PNG images")[0] if "! Export PNG images" in base_design_apdl else base_design_apdl
+    clean_design_apdl = clean_design_apdl.replace("/EOF", "").replace("FINISH\n/EOF", "")
+
+    # Build complete self-contained GUI launch script
     build_and_show_script = f"""FINISH
 /CLEAR,NOSTART
-/TITLE, Ladakh Passive Shelter - Frontend Mirror (ANSYS GUI)
+/TITLE, Ladakh Passive Shelter - 3D FEA Interactive Model
 *SET,SLEN,{slen}
 *SET,SWID,{swid}
 *SET,SHGT,{shgt}
@@ -385,14 +629,39 @@ def open_ansys_gui(job_id: str, shelter_input=None, materials_db: dict = None) -
 *SET,KFLOOR,{fmat.get('conductivity', 1.80)}
 *SET,RHOFLOOR,{fmat.get('density', 2400)}
 *SET,CPFLOOR,{fmat.get('specific_heat', 900)}
-/INPUT,shelter_design,apdl
+
+{clean_design_apdl}
+
+! ============================================================
+! INTERACTIVE GUI 3D DISPLAY & RENDERING
+! Website-matched color palette via /RGB (correct ANSYS command)
+! /RGB,index,R,G,B  (values 0.0-1.0)
+! ============================================================
+/PREP7
+ALLSEL,ALL
+/RGB,0,0.02,0.04,0.08      ! Background: Dark slate black
+/RGB,1,0.76,0.61,0.45      ! Mat 1 = Walls:   Mud Brick tan/beige
+/RGB,2,0.55,0.35,0.17      ! Mat 2 = Roof:    Timber brown
+/RGB,3,0.28,0.33,0.41      ! Mat 3 = Plinth:  Stone dark grey
+/RGB,4,0.38,0.65,0.98      ! Mat 4 = Windows: Glass blue
+/RGB,5,0.36,0.23,0.13      ! Mat 5 = Door:    Wood brown
+/RGB,6,0.43,0.32,0.22      ! Mat 6 = Floor:   Rammed earth
+/PNUM,MAT,1
+/NUMBER,0
+/PLOPTS,INFO,3
+/PLOPTS,FRAME,0
+/PLOPTS,LOGO,0
+/VIEW,1,1,-1,1
+/VUP,1,0,0,1
+/AUTO,1
+/DIST,1,1.3,1
+/FACET,FINE
+/SHRINK,0.02
+/GOPR
+/REPLOT
+VPLOT
 """
     script_file = job_dir / "build_and_show.apdl"
-    # Copy the shelter_design.apdl template to job dir so /INPUT can find it
-    import shutil as _shutil
-    template_src = TEMPLATE_DIR / "shelter_design.apdl"
-    if template_src.exists():
-        _shutil.copy(template_src, job_dir / "shelter_design.apdl")
     try:
         script_file.write_text(build_and_show_script, encoding="utf-8")
         (job_dir / "start.ans").write_text(build_and_show_script, encoding="utf-8")
@@ -422,6 +691,7 @@ def open_ansys_gui(job_id: str, shelter_input=None, materials_db: dict = None) -
             "message": "ANSYS MAPDL GUI launched! The complete 3D shelter model is rendering on your screen.",
             "job_id": job_id,
             "working_directory": str(job_dir),
+            "batch_file": str(job_dir / "open_model_in_ansys.bat"),
         }
     except Exception as e:
         logger.error(f"Failed to launch ANSYS GUI: {e}")
@@ -431,8 +701,8 @@ def open_ansys_gui(job_id: str, shelter_input=None, materials_db: dict = None) -
 def run_ansys_simulation(inputs, materials_db: dict, climate_profile: dict) -> dict:
     """
     Two-phase ANSYS + FDM workflow:
-    Phase 1: ANSYS MAPDL builds accurate 3D shelter geometry in batch mode & exports 3D PNG plots + .db file.
-    Phase 2: Python FDM runs transient thermal on ANSYS geometry.
+    Phase 1: ANSYS MAPDL builds accurate 3D shelter geometry AND runs transient thermal FEA.
+    Phase 2: Python FDM runs only when ANSYS thermal did not produce results.
     """
     from app.services.fallback_engine import run_fdm_simulation
 
@@ -446,13 +716,27 @@ def run_ansys_simulation(inputs, materials_db: dict, climate_profile: dict) -> d
     geom = {}
     ansys_images = {}
     try:
-        geom = _run_ansys_design_phase(inputs, job_dir, materials_db)
+        # Pass climate_profile so shelter_thermal.apdl is appended and executed
+        geom = _run_ansys_design_phase(inputs, job_dir, materials_db, climate_profile)
         ansys_ok = geom.get("total_nodes", 0) > 0
         ansys_images = _extract_ansys_images(job_dir)
     except Exception as e:
         logger.warning(f"ANSYS Design Phase error: {e}")
         geom = _geometry_from_inputs(inputs)
 
+    # If ANSYS ran the full thermal FEA, use its temperature results directly
+    if geom.get("ansys_thermal_solved") and geom.get("peak_inside_temp_C") is not None:
+        logger.info("Using ANSYS Transient Thermal FEA results (skipping Python FDM)")
+        # Build FDM result structure from ANSYS thermal output
+        result = _build_result_from_ansys_thermal(inputs, geom, climate_profile, job_id)
+        result["job_id"] = job_id
+        result["ansys_job_id"] = job_id
+        result["engine_used"] = "ansys_thermal_fea"
+        result["ansys_db_exists"] = (job_dir / "shelter_3d.db").exists() or (job_dir / "file.db").exists()
+        result.update(ansys_images)
+        return result
+
+    # Fallback: Python FDM thermal on ANSYS geometry
     try:
         result = _run_fdm_with_ansys_geometry(inputs, geom, materials_db, climate_profile, job_id)
         result["job_id"] = job_id

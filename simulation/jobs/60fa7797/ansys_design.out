@@ -1,0 +1,1055 @@
+
+ Ansys Mechanical Enterprise Academic Student      
+
+
+ *------------------------------------------------------------------*
+ |                                                                  |
+ |   W E L C O M E   T O   T H E   A N S Y S (R)  P R O G R A M     |
+ |                                                                  |
+ *------------------------------------------------------------------*
+
+
+
+
+ ***************************************************************
+ *         ANSYS MAPDL 2026 R1          LEGAL NOTICES          *
+ ***************************************************************
+ *                                                             *
+ * Copyright (c) 2026 Synopsys, Inc. and ANSYS, Inc.           *
+ * All rights reserved.                                        *
+ * Unauthorized use, distribution or duplication is            *
+ * prohibited.                                                 *
+ *                                                             *
+ * Ansys is a registered trademark of Ansys, Inc. or its       *
+ * subsidiaries in the United States or other countries.       *
+ * See the Ansys, Inc. online documentation or the Ansys, Inc. *
+ * documentation CD or online help for the complete Legal      *
+ * Notice.                                                     *
+ *                                                             *
+ ***************************************************************
+ *                                                             *
+ * THIS ANSYS SOFTWARE PRODUCT AND PROGRAM DOCUMENTATION       *
+ * INCLUDE TRADE SECRETS AND CONFIDENTIAL AND PROPRIETARY      *
+ * PRODUCTS OF ANSYS, INC., ITS SUBSIDIARIES, OR LICENSORS.    *
+ * The software products and documentation are furnished by    *
+ * Ansys, Inc. or its subsidiaries under a software license    *
+ * agreement that contains provisions concerning               *
+ * non-disclosure, copying, length and nature of use,          *
+ * compliance with exporting laws, warranties, disclaimers,    *
+ * limitations of liability, and remedies, and other           *
+ * provisions.  The software products and documentation may be *
+ * used, disclosed, transferred, or copied only in accordance  *
+ * with the terms and conditions of that software license      *
+ * agreement.                                                  *
+ *                                                             *
+ * Ansys, Inc. is a UL registered                              *
+ * ISO 9001:2015 company.                                      *
+ *                                                             *
+ ***************************************************************
+ *                                                             *
+ * This product is subject to U.S. laws governing export and   *
+ * re-export.                                                  *
+ *                                                             *
+ * For U.S. Government users, except as specifically granted   *
+ * by the Ansys, Inc. software license agreement, the use,     *
+ * duplication, or disclosure by the United States Government  *
+ * is subject to restrictions stated in the Ansys, Inc.        *
+ * software license agreement and FAR 12.212 (for non-DOD      *
+ * licenses).                                                  *
+ *                                                             *
+ ***************************************************************
+
+ 2026 R1 
+     
+ Point Releases and Patches installed:   
+     
+ Ansys, Inc. License Manager 2026 R1 
+ Discovery (full install) 2026 R1
+ Core WB Files 2026 R1   
+ optiSLang Core UI 2026 R1   
+ CFX (includes CFD-Post) 2026 R1 
+ Chemkin 2026 R1 
+ EnSight 2026 R1 
+ FENSAP-ICE 2026 R1  
+ Fluent (includes CFD-Post) 2026 R1  
+ Polyflow (includes CFD-Post) 2026 R1
+ Forte (includes EnSight) 2026 R1
+ Rocky 2026 R1   
+ TurboGrid 2026 R1   
+ ACIS Geometry Interface 2026 R1 
+ AutoCAD Geometry Interface 2026 R1  
+ Catia, Version 4 Geometry Interface 2026 R1 
+ Catia, Version 5 Geometry Interface 2026 R1 
+ Catia, Version 6 Geometry Interface 2026 R1 
+ Creo Elements/Direct Modeling Geometry Interface 2026 R1
+ Creo Parametric Geometry Interface 2026 R1  
+ Inventor Geometry Interface 2026 R1 
+ JTOpen Geometry Interface 2026 R1   
+ NX Geometry Interface 2026 R1   
+ Parasolid Geometry Interface  2026 R1   
+ Solid Edge Geometry Interface 2026 R1   
+ SOLIDWORKS Geometry Interface 2026 R1   
+ Speos 2026 R1   
+ SpaceClaim 2026 R1  
+ Speos RPC 2026 R1   
+ Zemax OpticStudio 2026 R1   
+ Dynamic Reporting 2026 R1   
+ Aqwa 2026 R1
+ Autodyn 2026 R1 
+ Material Calibration App 2026 R1
+ Mechanical Products 2026 R1 
+ Motion 2026 R1  
+ Academic Student 2026 R1
+
+
+          *****  MAPDL COMMAND LINE ARGUMENTS  *****
+  BATCH MODE REQUESTED (-b)    = LIST
+  INPUT FILE COPY MODE (-c)    = COPY
+       1 PARALLEL PROCESSES REQUESTED WITH SINGLE THREAD PER PROCESS
+    TOTAL OF     1 CORES REQUESTED
+  INPUT FILE NAME              = d:\SIH\simulation\jobs\60fa7797\run_design.apdl
+  OUTPUT FILE NAME             = d:\SIH\simulation\jobs\60fa7797\ansys_design.out
+  MEMORY REQUESTED (MB)        = 1024        
+  INITIAL DIRECTORY = d:\SIH\simulation\jobs\60fa7797
+
+ RELEASE= 2026 R1              BUILD= 26.1      UP20260202   VERSION=WINDOWS x64 
+ CURRENT JOBNAME=file  17:26:45  AUG 26, 2026  Elapsed Time=       0.078
+
+     1  /BATCH  
+     2  *SET,SLEN,6.0   
+     3  *SET,SWID,4.0   
+     4  *SET,SHGT,3.0   
+     5  *SET,WTHK,0.35  
+     6  *SET,NWIN,0 
+     7  *SET,NDOOR,0
+     8  *SET,SHAPE,0
+     9  *SET,ROOFT,1
+    10  *SET,KWALL,0.52 
+    11  *SET,RHOWALL,1700   
+    12  *SET,CPWALL,879 
+    13  *SET,KROOF,0.52 
+    14  *SET,RHOROOF,1700   
+    15  *SET,CPROOF,879 
+    16  *SET,KFLOOR,0.85
+    17  *SET,RHOFLOOR,2000  
+    18  *SET,CPFLOOR,840
+    19  /TITLE, Ladakh Passive Shelter - Parametric 3D Model (Frontend Mirror)  
+    20      
+    21  ! ============================================================  
+    22  ! PARAMETERS injected by run_design.apdl:   
+    23  !   SLEN   - Length (m)         SWID  - Width (m)   
+    24  !   SHGT   - Wall Height (m)    WTHK  - Wall Thickness (m)  
+    25  !   NWIN   - Windows on south wall   NDOOR - Doors (0,1,2)  
+    26  !   SHAPE  - 0=Rectangular  1=Dome/Igloo
+    27  !   ROOFT  - 0=Flat roof    1=Gable pitched roof
+    28  !   KWALL/RHOWALL/CPWALL  - Wall material properties
+    29  !   KROOF/RHOROOF/CPROOF  - Roof material properties
+    30  !   KFLOOR/RHOFLOOR/CPFLOOR - Floor material properties 
+    31  ! ============================================================  
+    32      
+    33  ! Defaults (overridden by run_design.apdl header)   
+    34  *SET,SLEN,6.0   $ *SET,SWID,4.0   $ *SET,SHGT,3.0  $ *SET,WTHK,0.45 
+    35  *SET,NWIN,3     $ *SET,NDOOR,1    $ *SET,SHAPE,0   $ *SET,ROOFT,1   
+    36  *SET,KWALL,0.72 $ *SET,RHOWALL,1800 $ *SET,CPWALL,840   
+    37  *SET,KROOF,0.15 $ *SET,RHOROOF,650  $ *SET,CPROOF,1200  
+    38  *SET,KFLOOR,1.80$ *SET,RHOFLOOR,2400$ *SET,CPFLOOR,900  
+    39      
+    40  /PREP7  
+    41  ET,1,SOLID70
+    42      
+    43  ! --- Materials --- 
+    44  MP,KXX,1,KWALL  $ MP,DENS,1,RHOWALL  $ MP,C,1,CPWALL
+    45  MP,KXX,2,KROOF  $ MP,DENS,2,RHOROOF  $ MP,C,2,CPROOF
+    46  MP,KXX,3,1.80   $ MP,DENS,3,2400     $ MP,C,3,900   
+    47  MP,KXX,4,1.00   $ MP,DENS,4,2500     $ MP,C,4,750   
+    48  MP,KXX,5,0.15   $ MP,DENS,5,650      $ MP,C,5,1200  
+    49  MP,KXX,6,KFLOOR $ MP,DENS,6,RHOFLOOR $ MP,C,6,CPFLOOR   
+    50      
+    51  ! ============================================================  
+    52  *IF,SHAPE,EQ,1,THEN 
+    53  ! ===========================================================   
+    54  ! DOME / IGLOO (mirrors frontend iglooMat hemisphere)   
+    55  ! ===========================================================   
+    56    *SET,DOME_R,(SLEN+SWID)*0.25+0.3  
+    57    *SET,DOME_H,SHGT  
+    58    TYPE,1 $ MAT,3
+    59    CYLIND,0,(DOME_R+0.25),-0.12,0,0,360  
+    60    TYPE,1 $ MAT,6
+    61    CYLIND,0,(DOME_R-0.1),0,0.12,0,360
+    62    TYPE,1 $ MAT,1
+    63    SPHERE,(DOME_R-WTHK),DOME_R,0,90,0,360
+    64    TYPE,1 $ MAT,1
+    65    *SET,TUNL,1.4 
+    66    *SET,TUNW,0.9 
+    67    CYLIND,0,TUNW/2,DOME_R,(DOME_R+TUNL),0,180
+    68      
+    69  *ELSE   
+    70  ! ===========================================================   
+    71  ! RECTANGULAR HOUSE (mirrors frontend buildWall engine) 
+    72  ! ===========================================================   
+    73      
+    74    ! 1. Foundation Plinth (Mat 3)
+    75    TYPE,1 $ MAT,3
+    76    BLOCK,0,(SLEN+2*WTHK),0,(SWID+2*WTHK),-0.3,0  
+    77      
+    78    ! 2. Floor Slab (Mat 6)   
+    79    TYPE,1 $ MAT,6
+    80    BLOCK,WTHK,(SLEN+WTHK),WTHK,(SWID+WTHK),0,0.15
+    81      
+    82    ! 3. North Wall - Solid (Mat 1)   
+    83    TYPE,1 $ MAT,1
+    84    BLOCK,WTHK,(SLEN+WTHK),(SWID+WTHK),(SWID+2*WTHK),0,SHGT   
+    85      
+    86    ! 4. West Wall - Solid (Mat 1)
+    87    TYPE,1 $ MAT,1
+    88    BLOCK,0,WTHK,0,(SWID+2*WTHK),0,SHGT   
+    89      
+    90    ! 5. East Wall - Solid (Mat 1)
+    91    TYPE,1 $ MAT,1
+    92    BLOCK,(SLEN+WTHK),(SLEN+2*WTHK),0,(SWID+2*WTHK),0,SHGT
+    93      
+    94    ! 6. South Wall - Dynamic openings (mirrors frontend layout engine)   
+    95    *SET,MARGIN,0.4   
+    96    *SET,TITEMS,NDOOR+NWIN
+    97    *SET,DOOR_W,0.9   
+    98    *SET,DOOR_H,2.1   
+    99    *SET,WIN_W,1.2
+   100    *SET,WIN_H,1.2
+   101    *SET,WIN_SILL,0.85
+   102    *SET,WIN_TOP,WIN_SILL+WIN_H   
+   103      
+   104    ! Cursor starts at left margin
+   105    *SET,CUR,WTHK+MARGIN  
+   106      
+   107    ! Left corner pillar (before door)
+   108    TYPE,1 $ MAT,1
+   109    BLOCK,WTHK,CUR,0,WTHK,0,SHGT  
+   110      
+   111    ! DOOR 1  
+   112    *IF,NDOOR,GE,1,THEN   
+   113      *SET,DX1,CUR
+   114      *SET,DX2,CUR+DOOR_W 
+   115      TYPE,1 $ MAT,5  
+   116      BLOCK,DX1,DX2,(WTHK*0.25),(WTHK*0.75),0,DOOR_H  
+   117      *SET,CUR,DX2+0.35   
+   118    *ENDIF
+   119      
+   120    ! DOOR 2  
+   121    *IF,NDOOR,GE,2,THEN   
+   122      *SET,DX3,CUR
+   123      *SET,DX4,CUR+DOOR_W 
+   124      TYPE,1 $ MAT,1  
+   125      BLOCK,DX2,DX3,0,WTHK,0,SHGT 
+   126      TYPE,1 $ MAT,5  
+   127      BLOCK,DX3,DX4,(WTHK*0.25),(WTHK*0.75),0,DOOR_H  
+   128      *SET,CUR,DX4+0.35   
+   129    *ENDIF
+   130      
+   131    ! Compute window gap  
+   132    *SET,END_X,WTHK+SLEN-MARGIN   
+   133    *SET,WIN_GAP,0.3  
+   134    *IF,NWIN,GT,0,THEN
+   135      *SET,WIN_GAP,(END_X-CUR-NWIN*WIN_W)/NWIN
+   136      *IF,WIN_GAP,LT,0.2,THEN 
+   137        *SET,WIN_GAP,0.2  
+   138      *ENDIF  
+   139    *ENDIF
+   140      
+   141    ! WINDOW 1
+   142    *SET,PREV_WIN_END,CUR 
+   143    *IF,NWIN,GE,1,THEN
+   144      *SET,WX1,CUR
+   145      *SET,WX2,CUR+WIN_W  
+   146      TYPE,1 $ MAT,1  
+   147      BLOCK,PREV_WIN_END,WX1,0,WTHK,0,SHGT
+   148      BLOCK,WX1,WX2,0,WTHK,0,WIN_SILL 
+   149      TYPE,1 $ MAT,4  
+   150      BLOCK,WX1,WX2,(WTHK*0.35),(WTHK*0.65),WIN_SILL,WIN_TOP  
+   151      *SET,PREV_WIN_END,WX2   
+   152      *SET,CUR,WX2+WIN_GAP
+   153    *ENDIF
+   154      
+   155    ! WINDOW 2
+   156    *IF,NWIN,GE,2,THEN
+   157      *SET,WX3,CUR
+   158      *SET,WX4,CUR+WIN_W  
+   159      TYPE,1 $ MAT,1  
+   160      BLOCK,PREV_WIN_END,WX3,0,WTHK,0,SHGT
+   161      BLOCK,WX3,WX4,0,WTHK,0,WIN_SILL 
+   162      TYPE,1 $ MAT,4  
+   163      BLOCK,WX3,WX4,(WTHK*0.35),(WTHK*0.65),WIN_SILL,WIN_TOP  
+   164      *SET,PREV_WIN_END,WX4   
+   165      *SET,CUR,WX4+WIN_GAP
+   166    *ENDIF
+   167      
+   168    ! WINDOW 3
+   169    *IF,NWIN,GE,3,THEN
+   170      *SET,WX5,CUR
+   171      *SET,WX6,CUR+WIN_W  
+   172      TYPE,1 $ MAT,1  
+   173      BLOCK,PREV_WIN_END,WX5,0,WTHK,0,SHGT
+   174      BLOCK,WX5,WX6,0,WTHK,0,WIN_SILL 
+   175      TYPE,1 $ MAT,4  
+   176      BLOCK,WX5,WX6,(WTHK*0.35),(WTHK*0.65),WIN_SILL,WIN_TOP  
+   177      *SET,PREV_WIN_END,WX6   
+   178      *SET,CUR,WX6
+   179    *ENDIF
+   180      
+   181    ! Right corner pillar 
+   182    TYPE,1 $ MAT,1
+   183    BLOCK,PREV_WIN_END,(SLEN+WTHK),0,WTHK,0,SHGT  
+   184      
+   185    ! Lintel beam above all openings  
+   186    *SET,MAX_OH,DOOR_H
+   187    *IF,WIN_TOP,GT,DOOR_H,THEN
+   188      *SET,MAX_OH,WIN_TOP 
+   189    *ENDIF
+   190    *IF,SHGT-MAX_OH,GT,0.05,THEN  
+   191      TYPE,1 $ MAT,1  
+   192      BLOCK,WTHK,(SLEN+WTHK),0,WTHK,MAX_OH,SHGT   
+   193    *ENDIF
+   194      
+   195    ! 7. ROOF 
+   196    *IF,ROOFT,EQ,1,THEN   
+   197      ! Gable Pitched Roof (mirrors frontend roofType='pitched')  
+   198      *SET,PH,1.6 
+   199      TYPE,1 $ MAT,2  
+   200      ! South slope   
+   201      BLOCK,-0.4,(SLEN+2*WTHK+0.4),-0.4,(SWID/2+WTHK),SHGT,(SHGT+PH*0.55+0.15)
+   202      ! North slope   
+   203      BLOCK,-0.4,(SLEN+2*WTHK+0.4),(SWID/2+WTHK),(SWID+2*WTHK+0.4),SHGT,(SHGT+PH*0.55+0.15)   
+   204      ! Ridge cap 
+   205      BLOCK,-0.4,(SLEN+2*WTHK+0.4),(SWID/2+WTHK-0.12),(SWID/2+WTHK+0.12),(SHGT+PH*0.55),(SHGT+PH+0.15)
+   206      ! Gable end walls   
+   207      TYPE,1 $ MAT,1  
+   208      BLOCK,(SLEN+WTHK),(SLEN+2*WTHK+0.4),-0.4,(SWID+2*WTHK+0.4),SHGT,(SHGT+PH*0.55)  
+   209      BLOCK,-0.4,WTHK,-0.4,(SWID+2*WTHK+0.4),SHGT,(SHGT+PH*0.55)  
+   210      ! Chimney stack (Mat 2) 
+   211      TYPE,1 $ MAT,2  
+   212      BLOCK,(WTHK+1.0),(WTHK+1.5),(WTHK+SWID*0.35),(WTHK+SWID*0.35+0.5),SHGT,(SHGT+PH+0.9)
+   213    *ELSE 
+   214      ! Flat Roof with Overhang (mirrors roofType='flat') 
+   215      TYPE,1 $ MAT,2  
+   216      BLOCK,-0.3,(SLEN+2*WTHK+0.3),-0.3,(SWID+2*WTHK+0.3),SHGT,(SHGT+0.35)
+   217    *ENDIF
+   218      
+   219  *ENDIF  
+   220      
+   221  ! ============================================================  
+   222  ! MESH  
+   223  ! ============================================================  
+   224  *SET,EMSH,WTHK  
+   225  *IF,EMSH,LT,0.35,THEN   
+   226    *SET,EMSH,0.35
+   227  *ENDIF  
+   228  ESIZE,EMSH  
+   229  VMESH,ALL   
+   230      
+   231  ! ============================================================  
+   232  ! GEOMETRY REPORT   
+   233  ! ============================================================  
+   234  *SET,WALL_AREA,2*(SLEN+SWID)*SHGT   
+   235  *SET,SOUTH_WALL_AREA,SWID*SHGT  
+   236  *SET,ROOF_AREA,SLEN*SWID
+   237  *SET,FLOOR_AREA,SLEN*SWID   
+   238  *SET,INT_VOL,SLEN*SWID*SHGT 
+   239  *GET,TOTAL_NODES,NODE,,COUNT
+   240      
+   241  ! ============================================================  
+   242  ! VIEW + COLOR SETUP — Front isometric (South facade visible) 
+   243  ! ============================================================  
+   244  ALLSEL,ALL  
+   245  FINISH  
+   246  /PREP7  
+   247      
+   248  ! ============================================================  
+   249  ! MATERIAL COLORS — Exact match with website 3D viewer palette
+   250  ! Using /RGB (correct ANSYS command) instead of /COLOR,MAT  
+   251  ! /RGB,index,R,G,B  — values are 0.0 to 1.0   
+   252  ! ============================================================  
+   253  !   Index 0  = Background     → Dark slate black  
+   254  !   Index 1  = Mat 1 Walls    → Mud Brick beige/tan  #C29B74  
+   255  !   Index 2  = Mat 2 Roof     → Timber brown         #8B5A2B  
+   256  !   Index 3  = Mat 3 Plinth   → Stone dark grey      #475569  
+   257  !   Index 4  = Mat 4 Windows  → Glass cyan blue      #60A5FA  
+   258  !   Index 5  = Mat 5 Door     → Wood dark brown      #5C3A21  
+   259  !   Index 6  = Mat 6 Floor    → Rammed earth         #6E5238  
+   260      
+   261  /RGB,0,0.02,0.04,0.08      ! Background: Dark slate 
+   262  /RGB,1,0.76,0.61,0.45      ! Mat 1 = Walls:   Mud Brick tan/beige   
+   263  /RGB,2,0.55,0.35,0.17      ! Mat 2 = Roof:    Timber brown  
+   264  /RGB,3,0.28,0.33,0.41      ! Mat 3 = Plinth:  Stone dark grey   
+   265  /RGB,4,0.38,0.65,0.98      ! Mat 4 = Windows: Glass blue
+   266  /RGB,5,0.36,0.23,0.13      ! Mat 5 = Door:    Wood brown
+   267  /RGB,6,0.43,0.32,0.22      ! Mat 6 = Floor:   Rammed earth  
+   268      
+   269  ! Enable material color numbering (NO numeric labels shown) 
+   270  /PNUM,MAT,1 
+   271  /NUMBER,0   
+   272  /PLOPTS,INFO,3  
+   273  /PLOPTS,FRAME,0 
+   274  /PLOPTS,LOGO,0  
+   275      
+   276  ! Isometric view — same angle as website Three.js camera  
+   277  /VIEW,1,1,-1,1  
+   278  /VUP,1,0,0,1
+   279  /ANG,1,0
+   280  /AUTO,1 
+   281  /DIST,1,1.5,1   
+   282  /FACET,FINE 
+   283  /SHRINK,0.02
+   284  VPLOT   
+   285      
+   286  ! Export PNG images for website display 
+   287  /SHOW,PNG,,0
+   288  PNGR,COMP,1 
+   289  PNGR,ORIENT,HORIZ   
+   290  /GFILE,1200 
+   291  VPLOT   
+   292  /SHOW,CLOSE 
+   293      
+   294  ! FEA Mesh PNG export   
+   295  /SHOW,PNG,,0
+   296  EPLOT   
+   297  /SHOW,CLOSE 
+   298      
+   299  SAVE,shelter_3d,db,,ALL 
+   300  /NOPR   
+   301      
+   302  *CFOPEN,geometry_out,csv,,APPEND
+   303  *CFWRITE,PARAM,VALUE
+   304  *CFWRITE,length_m,%SLEN%
+   305  *CFWRITE,width_m,%SWID% 
+   306  *CFWRITE,height_m,%SHGT%
+   307  *CFWRITE,wall_thickness_m,%WTHK%
+   308  *CFWRITE,num_windows,%NWIN% 
+   309  *CFWRITE,num_doors,%NDOOR%  
+   310  *CFWRITE,shape_type,%SHAPE% 
+   311  *CFWRITE,roof_type,%ROOFT%  
+   312  *CFWRITE,wall_area_m2,%WALL_AREA%   
+   313  *CFWRITE,south_wall_area_m2,%SOUTH_WALL_AREA%   
+   314  *CFWRITE,roof_area_m2,%ROOF_AREA%   
+   315  *CFWRITE,floor_area_m2,%FLOOR_AREA% 
+   316  *CFWRITE,interior_volume_m3,%INT_VOL%   
+   317  *CFWRITE,total_nodes,%TOTAL_NODES%  
+   318  *CFCLOS 
+   319      
+   320  FINISH  
+   321      
+   322      
+   323  *SET,T0,-18.76  
+   324  *SET,T_INSIDE_INIT,-18.76   
+   325  *SET,GNDTEMP,4.0
+   326  *SET,NHRS,24
+   327  *DIM,TAMB_TB,TABLE,26,1,1,TIME  
+   328  *DIM,QSOLS_TB,TABLE,26,1,1,TIME 
+   329  *DIM,QSOLR_TB,TABLE,26,1,1,TIME 
+   330  *DIM,HEXT_TB,TABLE,26,1,1,TIME  
+   331  TAMB_TB(1,0,1)=0 $ TAMB_TB(1,1,1)=-18.76
+   332  QSOLS_TB(1,0,1)=0 $ QSOLS_TB(1,1,1)=0.00
+   333  QSOLR_TB(1,0,1)=0 $ QSOLR_TB(1,1,1)=0.00
+   334  HEXT_TB(1,0,1)=0 $ HEXT_TB(1,1,1)=11.60 
+   335  TAMB_TB(2,0,1)=3600 $ TAMB_TB(2,1,1)=-19.28 
+   336  QSOLS_TB(2,0,1)=3600 $ QSOLS_TB(2,1,1)=0.00 
+   337  QSOLR_TB(2,0,1)=3600 $ QSOLR_TB(2,1,1)=0.00 
+   338  HEXT_TB(2,0,1)=3600 $ HEXT_TB(2,1,1)=10.40  
+   339  TAMB_TB(3,0,1)=7200 $ TAMB_TB(3,1,1)=-19.79 
+   340  QSOLS_TB(3,0,1)=7200 $ QSOLS_TB(3,1,1)=0.00 
+   341  QSOLR_TB(3,0,1)=7200 $ QSOLR_TB(3,1,1)=0.00 
+   342  HEXT_TB(3,0,1)=7200 $ HEXT_TB(3,1,1)=9.60   
+   343  TAMB_TB(4,0,1)=10800 $ TAMB_TB(4,1,1)=-20.00
+   344  QSOLS_TB(4,0,1)=10800 $ QSOLS_TB(4,1,1)=0.00
+   345  QSOLR_TB(4,0,1)=10800 $ QSOLR_TB(4,1,1)=0.00
+   346  HEXT_TB(4,0,1)=10800 $ HEXT_TB(4,1,1)=9.60  
+   347  TAMB_TB(5,0,1)=14400 $ TAMB_TB(5,1,1)=-19.79
+   348  QSOLS_TB(5,0,1)=14400 $ QSOLS_TB(5,1,1)=0.00
+   349  QSOLR_TB(5,0,1)=14400 $ QSOLR_TB(5,1,1)=0.00
+   350  HEXT_TB(5,0,1)=14400 $ HEXT_TB(5,1,1)=9.60  
+   351  TAMB_TB(6,0,1)=18000 $ TAMB_TB(6,1,1)=-19.28
+   352  QSOLS_TB(6,0,1)=18000 $ QSOLS_TB(6,1,1)=0.00
+   353  QSOLR_TB(6,0,1)=18000 $ QSOLR_TB(6,1,1)=0.00
+   354  HEXT_TB(6,0,1)=18000 $ HEXT_TB(6,1,1)=10.40 
+   355  TAMB_TB(7,0,1)=21600 $ TAMB_TB(7,1,1)=-18.24
+   356  QSOLS_TB(7,0,1)=21600 $ QSOLS_TB(7,1,1)=0.00
+   357  QSOLR_TB(7,0,1)=21600 $ QSOLR_TB(7,1,1)=0.00
+   358  HEXT_TB(7,0,1)=21600 $ HEXT_TB(7,1,1)=11.60 
+   359  TAMB_TB(8,0,1)=25200 $ TAMB_TB(8,1,1)=-15.65
+   360  QSOLS_TB(8,0,1)=25200 $ QSOLS_TB(8,1,1)=0.00
+   361  QSOLR_TB(8,0,1)=25200 $ QSOLR_TB(8,1,1)=0.00
+   362  HEXT_TB(8,0,1)=25200 $ HEXT_TB(8,1,1)=13.60 
+   363  TAMB_TB(9,0,1)=28800 $ TAMB_TB(9,1,1)=-12.55
+   364  QSOLS_TB(9,0,1)=28800 $ QSOLS_TB(9,1,1)=149.52  
+   365  QSOLR_TB(9,0,1)=28800 $ QSOLR_TB(9,1,1)=48.31   
+   366  HEXT_TB(9,0,1)=28800 $ HEXT_TB(9,1,1)=15.60 
+   367  TAMB_TB(10,0,1)=32400 $ TAMB_TB(10,1,1)=-8.41   
+   368  QSOLS_TB(10,0,1)=32400 $ QSOLS_TB(10,1,1)=290.97
+   369  QSOLR_TB(10,0,1)=32400 $ QSOLR_TB(10,1,1)=148.12
+   370  HEXT_TB(10,0,1)=32400 $ HEXT_TB(10,1,1)=17.60   
+   371  TAMB_TB(11,0,1)=36000 $ TAMB_TB(11,1,1)=-4.26   
+   372  QSOLS_TB(11,0,1)=36000 $ QSOLS_TB(11,1,1)=427.27
+   373  QSOLR_TB(11,0,1)=36000 $ QSOLR_TB(11,1,1)=262.99
+   374  HEXT_TB(11,0,1)=36000 $ HEXT_TB(11,1,1)=19.60   
+   375  TAMB_TB(12,0,1)=39600 $ TAMB_TB(12,1,1)=-1.16   
+   376  QSOLS_TB(12,0,1)=39600 $ QSOLS_TB(12,1,1)=507.66
+   377  QSOLR_TB(12,0,1)=39600 $ QSOLR_TB(12,1,1)=340.74
+   378  HEXT_TB(12,0,1)=39600 $ HEXT_TB(12,1,1)=19.60   
+   379  TAMB_TB(13,0,1)=43200 $ TAMB_TB(13,1,1)=1.43
+   380  QSOLS_TB(13,0,1)=43200 $ QSOLS_TB(13,1,1)=541.95
+   381  QSOLR_TB(13,0,1)=43200 $ QSOLR_TB(13,1,1)=373.17
+   382  HEXT_TB(13,0,1)=43200 $ HEXT_TB(13,1,1)=17.60   
+   383  TAMB_TB(14,0,1)=46800 $ TAMB_TB(14,1,1)=2.98
+   384  QSOLS_TB(14,0,1)=46800 $ QSOLS_TB(14,1,1)=518.94
+   385  QSOLR_TB(14,0,1)=46800 $ QSOLR_TB(14,1,1)=348.31
+   386  HEXT_TB(14,0,1)=46800 $ HEXT_TB(14,1,1)=17.60   
+   387  TAMB_TB(15,0,1)=50400 $ TAMB_TB(15,1,1)=3.50
+   388  QSOLS_TB(15,0,1)=50400 $ QSOLS_TB(15,1,1)=448.37
+   389  QSOLR_TB(15,0,1)=50400 $ QSOLR_TB(15,1,1)=275.98
+   390  HEXT_TB(15,0,1)=50400 $ HEXT_TB(15,1,1)=15.60   
+   391  TAMB_TB(16,0,1)=54000 $ TAMB_TB(16,1,1)=1.95
+   392  QSOLS_TB(16,0,1)=54000 $ QSOLS_TB(16,1,1)=319.13
+   393  QSOLR_TB(16,0,1)=54000 $ QSOLR_TB(16,1,1)=162.46
+   394  HEXT_TB(16,0,1)=54000 $ HEXT_TB(16,1,1)=15.60   
+   395  TAMB_TB(17,0,1)=57600 $ TAMB_TB(17,1,1)=-0.64   
+   396  QSOLS_TB(17,0,1)=57600 $ QSOLS_TB(17,1,1)=173.13
+   397  QSOLR_TB(17,0,1)=57600 $ QSOLR_TB(17,1,1)=55.93 
+   398  HEXT_TB(17,0,1)=57600 $ HEXT_TB(17,1,1)=13.60   
+   399  TAMB_TB(18,0,1)=61200 $ TAMB_TB(18,1,1)=-3.75   
+   400  QSOLS_TB(18,0,1)=61200 $ QSOLS_TB(18,1,1)=0.00  
+   401  QSOLR_TB(18,0,1)=61200 $ QSOLR_TB(18,1,1)=0.00  
+   402  HEXT_TB(18,0,1)=61200 $ HEXT_TB(18,1,1)=13.60   
+   403  TAMB_TB(19,0,1)=64800 $ TAMB_TB(19,1,1)=-6.85   
+   404  QSOLS_TB(19,0,1)=64800 $ QSOLS_TB(19,1,1)=0.00  
+   405  QSOLR_TB(19,0,1)=64800 $ QSOLR_TB(19,1,1)=0.00  
+   406  HEXT_TB(19,0,1)=64800 $ HEXT_TB(19,1,1)=12.80   
+   407  TAMB_TB(20,0,1)=68400 $ TAMB_TB(20,1,1)=-9.44   
+   408  QSOLS_TB(20,0,1)=68400 $ QSOLS_TB(20,1,1)=0.00  
+   409  QSOLR_TB(20,0,1)=68400 $ QSOLR_TB(20,1,1)=0.00  
+   410  HEXT_TB(20,0,1)=68400 $ HEXT_TB(20,1,1)=11.60   
+   411  TAMB_TB(21,0,1)=72000 $ TAMB_TB(21,1,1)=-12.03  
+   412  QSOLS_TB(21,0,1)=72000 $ QSOLS_TB(21,1,1)=0.00  
+   413  QSOLR_TB(21,0,1)=72000 $ QSOLR_TB(21,1,1)=0.00  
+   414  HEXT_TB(21,0,1)=72000 $ HEXT_TB(21,1,1)=11.60   
+   415  TAMB_TB(22,0,1)=75600 $ TAMB_TB(22,1,1)=-14.10  
+   416  QSOLS_TB(22,0,1)=75600 $ QSOLS_TB(22,1,1)=0.00  
+   417  QSOLR_TB(22,0,1)=75600 $ QSOLR_TB(22,1,1)=0.00  
+   418  HEXT_TB(22,0,1)=75600 $ HEXT_TB(22,1,1)=10.80   
+   419  TAMB_TB(23,0,1)=79200 $ TAMB_TB(23,1,1)=-16.17  
+   420  QSOLS_TB(23,0,1)=79200 $ QSOLS_TB(23,1,1)=0.00  
+   421  QSOLR_TB(23,0,1)=79200 $ QSOLR_TB(23,1,1)=0.00  
+   422  HEXT_TB(23,0,1)=79200 $ HEXT_TB(23,1,1)=10.40   
+   423  TAMB_TB(24,0,1)=82800 $ TAMB_TB(24,1,1)=-17.72  
+   424  QSOLS_TB(24,0,1)=82800 $ QSOLS_TB(24,1,1)=0.00  
+   425  QSOLR_TB(24,0,1)=82800 $ QSOLR_TB(24,1,1)=0.00  
+   426  HEXT_TB(24,0,1)=82800 $ HEXT_TB(24,1,1)=10.40   
+   427  TAMB_TB(25,0,1)=86400 $ TAMB_TB(25,1,1)=-18.76  
+   428  QSOLS_TB(25,0,1)=86400 $ QSOLS_TB(25,1,1)=0.00  
+   429  QSOLR_TB(25,0,1)=86400 $ QSOLR_TB(25,1,1)=0.00  
+   430  HEXT_TB(25,0,1)=86400 $ HEXT_TB(25,1,1)=11.60   
+   431  ! ============================================================  
+   432  ! TRANSIENT THERMAL FEA — 24-Hour Ladakh Climate Simulation   
+   433  ! (Called after shelter_design.apdl has built & meshed the geometry)
+   434  ! ============================================================  
+   435      
+   436  /PREP7  
+   437      
+   438  ! ============================================================  
+   439  ! THERMAL BOUNDARY CONDITIONS   
+   440  ! Exterior surface nodes selection  
+   441  ! ============================================================  
+   442      
+   443  ! Select exterior face nodes
+   444  NSEL,S,LOC,Y,-0.31,-0.29          ! Foundation bottom face  
+   445  NSEL,A,LOC,X,-0.01, 0.01          ! West outer face 
+   446  NSEL,A,LOC,X,(SLEN+2*WTHK-0.01),(SLEN+2*WTHK+0.01)  ! East outer face   
+   447      
+   448  ! Roof top exterior nodes   
+   449  *IF,ROOFT,EQ,1,THEN 
+   450    *SET,ROOF_TOP,SHGT+1.6+0.35   
+   451  *ELSE   
+   452    *SET,ROOF_TOP,SHGT+0.35   
+   453  *ENDIF  
+   454  NSEL,A,LOC,Y,(ROOF_TOP-0.02),(ROOF_TOP+0.05)
+   455      
+   456  ! South wall exterior nodes 
+   457  NSEL,A,LOC,Z,-0.01,0.01 
+   458      
+   459  ! North wall exterior nodes 
+   460  NSEL,A,LOC,Z,(SWID+2*WTHK-0.01),(SWID+2*WTHK+0.01)  
+   461      
+   462  ! Save as component for convection BC   
+   463  CM,EXT_NODES,NODE   
+   464      
+   465  ! Apply time-varying convection on all exterior surfaces using passed tables
+   466  SF,EXT_NODES,CONV,%HEXT_TB%,%TAMB_TB%   
+   467      
+   468  ! Solar flux on South wall exterior 
+   469  NSEL,S,LOC,Z,-0.01,0.01 
+   470  SF,ALL,HFLUX,%QSOLS_TB% 
+   471      
+   472  ! Solar flux on Roof
+   473  NSEL,S,LOC,Y,(ROOF_TOP-0.02),(ROOF_TOP+0.05)
+   474  SF,ALL,HFLUX,%QSOLR_TB% 
+   475      
+   476  ! Ground / Foundation Bottom: Constant deep-ground temp (4°C Ladakh)   
+   477  NSEL,S,LOC,Y,-0.32,-0.28
+   478  D,ALL,TEMP,GNDTEMP  
+   479      
+   480  ! Interior Air Convection   
+   481  NSEL,ALL
+   482  NSEL,S,LOC,Z,(WTHK*0.4),(WTHK*0.6)  
+   483  NSEL,A,LOC,Z,(SWID+WTHK*1.4),(SWID+WTHK*1.6)
+   484  NSEL,A,LOC,X,(WTHK*0.4),(WTHK*0.6)  
+   485  NSEL,A,LOC,X,(SLEN+WTHK*1.4),(SLEN+WTHK*1.6)
+   486  SF,ALL,CONV,4.0,T_INSIDE_INIT   
+   487      
+   488  ALLSEL,ALL  
+   489      
+   490  ! Initial Temperature Condition 
+   491  IC,ALL,TEMP,T0  
+   492      
+   493  ! ============================================================  
+   494  ! TRANSIENT THERMAL SOLVER SETTINGS 
+   495  ! ============================================================  
+   496  FINISH  
+   497  /SOLU   
+   498      
+   499  ANTYPE,TRANS          ! Transient thermal analysis  
+   500  TRNOPT,FULL           ! Full transient  
+   501  TIMINT,ON             ! Time integration ON 
+   502  KBC,0                 ! Ramped loading between time steps   
+   503      
+   504  DELTIM,3600,600,3600  ! Time step: 1 hour (3600 s)  
+   505  OUTRES,ALL,ALL        ! Save all results every sub-step 
+   506  NSUBST,1,6,1
+   507      
+   508  ! Solve 24 time steps (24 hours)
+   509  *DO,IHOUR,1,NHRS
+   510    TIME,IHOUR*3600   
+   511    SOLVE 
+   512  *ENDDO  
+   513      
+   514  FINISH  
+   515      
+   516  ! ============================================================  
+   517  ! POST-PROCESSING: Extract Temperature Results  
+   518  ! ============================================================  
+   519  /POST1  
+   520      
+   521  ! Read last time step   
+   522  SET,LAST
+   523      
+   524  ! Get temperature extremes  
+   525  *GET,T_MAX_ALL,NODE,0,TEMP,MAX  
+   526  *GET,T_MIN_ALL,NODE,0,TEMP,MIN  
+   527  *GET,T_AVG_ALL,NODE,0,TEMP,MEAN 
+   528      
+   529  ! Interior core nodes   
+   530  NSEL,S,LOC,X,(WTHK+0.3),(WTHK+SLEN-0.3) 
+   531  NSEL,R,LOC,Z,(WTHK+0.3),(WTHK+SWID-0.3) 
+   532  NSEL,R,LOC,Y,0.2,(SHGT-0.2) 
+   533  *GET,T_INT_MAX,NODE,0,TEMP,MAX  
+   534  *GET,T_INT_MIN,NODE,0,TEMP,MIN  
+   535  *GET,T_INT_AVG,NODE,0,TEMP,MEAN 
+   536  ALLSEL,ALL  
+   537      
+   538  ! South wall inner surface temperature  
+   539  NSEL,S,LOC,Z,(WTHK*0.85),(WTHK*1.15)
+   540  NSEL,R,LOC,Y,0.5,(SHGT*0.8) 
+   541  *GET,T_SWALL_IN,NODE,0,TEMP,MEAN
+   542  ALLSEL,ALL  
+   543      
+   544  ! ============================================================  
+   545  ! Write thermal results CSV 
+   546  ! ============================================================  
+   547  *CFOPEN,thermal_out,csv,,APPEND 
+   548  *CFWRITE,PARAM,VALUE
+   549  *CFWRITE,peak_inside_temp_C,%T_INT_MAX% 
+   550  *CFWRITE,min_inside_temp_C,%T_INT_MIN%  
+   551  *CFWRITE,avg_inside_temp_C,%T_INT_AVG%  
+   552  *CFWRITE,max_any_temp_C,%T_MAX_ALL% 
+   553  *CFWRITE,min_any_temp_C,%T_MIN_ALL% 
+   554  *CFWRITE,south_wall_inner_temp_C,%T_SWALL_IN%   
+   555      
+   556  ! Extract 24 hourly interior temperature steps from FEA database
+   557  *DO,IH,1,NHRS   
+   558    SET,IH
+   559    NSEL,S,LOC,X,(WTHK+0.3),(WTHK+SLEN-0.3)   
+   560    NSEL,R,LOC,Z,(WTHK+0.3),(WTHK+SWID-0.3)   
+   561    NSEL,R,LOC,Y,0.2,(SHGT-0.2)   
+   562    *GET,T_HR_VAL,NODE,0,TEMP,MEAN
+   563    ALLSEL,ALL
+   564    *CFWRITE,hour_%IH%,%T_HR_VAL% 
+   565  *ENDDO  
+   566      
+   567  *CFCLOS 
+   568      
+   569  FINISH  
+   570  /EOF
+
+ RUN SETUP PROCEDURE FROM FILE= D:\ANSYS Inc\ANSYS Student\v261\Ansys\apdl\start.ans
+
+ /INPUT FILE= D:\ANSYS Inc\ANSYS Student\v261\Ansys\apdl\start.ans  LINE=       0
+
+ PARAMETER SLEN =     6.000000000    
+
+ PARAMETER SWID =     4.000000000    
+
+ PARAMETER SHGT =     3.000000000    
+
+ PARAMETER WTHK =    0.3500000000    
+
+ PARAMETER NWIN =     0.000000000    
+
+ PARAMETER NDOOR =     0.000000000    
+
+ PARAMETER SHAPE =     0.000000000    
+
+ PARAMETER ROOFT =     1.000000000    
+
+ PARAMETER KWALL =    0.5200000000    
+
+ PARAMETER RHOWALL =     1700.000000    
+
+ PARAMETER CPWALL =     879.0000000    
+
+ PARAMETER KROOF =    0.5200000000    
+
+ PARAMETER RHOROOF =     1700.000000    
+
+ PARAMETER CPROOF =     879.0000000    
+
+ PARAMETER KFLOOR =    0.8500000000    
+
+ PARAMETER RHOFLOOR =     2000.000000    
+
+ PARAMETER CPFLOOR =     840.0000000    
+
+ TITLE= 
+  Ladakh Passive Shelter - Parametric 3D Model (Frontend Mirror)               
+
+
+ PARAMETER SLEN =     6.000000000    
+
+ PARAMETER SWID =     4.000000000    
+
+ PARAMETER SHGT =     3.000000000    
+
+ PARAMETER WTHK =    0.4500000000    
+
+ PARAMETER NWIN =     3.000000000    
+
+ PARAMETER NDOOR =     1.000000000    
+
+ PARAMETER SHAPE =     0.000000000    
+
+ PARAMETER ROOFT =     1.000000000    
+
+ PARAMETER KWALL =    0.7200000000    
+
+ PARAMETER RHOWALL =     1800.000000    
+
+ PARAMETER CPWALL =     840.0000000    
+
+ PARAMETER KROOF =    0.1500000000    
+
+ PARAMETER RHOROOF =     650.0000000    
+
+ PARAMETER CPROOF =     1200.000000    
+
+ PARAMETER KFLOOR =     1.800000000    
+
+ PARAMETER RHOFLOOR =     2400.000000    
+
+ PARAMETER CPFLOOR =     900.0000000    
+
+ *** MAPDL - ENGINEERING ANALYSIS SYSTEM  RELEASE 2026 R1          26.1     ***
+ Ansys Mechanical Enterprise Academic Student      
+ 01055371  VERSION=WINDOWS x64   17:26:45  AUG 26, 2026 Elapsed Time=      5.705
+
+  Ladakh Passive Shelter - Parametric 3D Model (Frontend Mirror)               
+
+
+
+          ***** MAPDL ANALYSIS DEFINITION (PREP7) *****
+
+ ELEMENT TYPE          1 IS SOLID70      3-D THERMAL SOLID           
+  KEYOPT( 1- 6)=        0      0      0        0      0      0
+  KEYOPT( 7-12)=        0      0      0        0      0      0
+  KEYOPT(13-18)=        0      0      0        0      0      0
+
+ CURRENT NODAL DOF SET IS  TEMP
+  THREE-DIMENSIONAL MODEL
+
+ MATERIAL          1     KXX  =  0.7200000      
+
+ MATERIAL          1     DENS =   1800.000      
+
+ MATERIAL          1     C    =   840.0000      
+
+ MATERIAL          2     KXX  =  0.1500000      
+
+ MATERIAL          2     DENS =   650.0000      
+
+ MATERIAL          2     C    =   1200.000      
+
+ MATERIAL          3     KXX  =   1.800000      
+
+ MATERIAL          3     DENS =   2400.000      
+
+ MATERIAL          3     C    =   900.0000      
+
+ MATERIAL          4     KXX  =   1.000000      
+
+ MATERIAL          4     DENS =   2500.000      
+
+ MATERIAL          4     C    =   750.0000      
+
+ MATERIAL          5     KXX  =  0.1500000      
+
+ MATERIAL          5     DENS =   650.0000      
+
+ MATERIAL          5     C    =   1200.000      
+
+ MATERIAL          6     KXX  =   1.800000      
+
+ MATERIAL          6     DENS =   2400.000      
+
+ MATERIAL          6     C    =   900.0000      
+
+ *IF  SHAPE  ( =   0.00000     )  EQ  
+      1  ( =   1.00000     )  THEN    
+
+ *ELSE
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         3
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM      0.000000000     TO      6.900000000    
+ Y-DISTANCES FROM      0.000000000     TO      4.900000000    
+ Z-DISTANCES FROM    -0.3000000000     TO      0.000000000    
+
+      OUTPUT VOLUME =     1
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         6
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM     0.4500000000     TO      6.450000000    
+ Y-DISTANCES FROM     0.4500000000     TO      4.450000000    
+ Z-DISTANCES FROM      0.000000000     TO     0.1500000000    
+
+      OUTPUT VOLUME =     2
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         1
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM     0.4500000000     TO      6.450000000    
+ Y-DISTANCES FROM      4.450000000     TO      4.900000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     3
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         1
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM      0.000000000     TO     0.4500000000    
+ Y-DISTANCES FROM      0.000000000     TO      4.900000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     4
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         1
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM      6.450000000     TO      6.900000000    
+ Y-DISTANCES FROM      0.000000000     TO      4.900000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     5
+
+ PARAMETER MARGIN =    0.4000000000    
+
+ PARAMETER TITEMS =     4.000000000    
+
+ PARAMETER DOOR_W =    0.9000000000    
+
+ PARAMETER DOOR_H =     2.100000000    
+
+ PARAMETER WIN_W =     1.200000000    
+
+ PARAMETER WIN_H =     1.200000000    
+
+ PARAMETER WIN_SILL =    0.8500000000    
+
+ PARAMETER WIN_TOP =     2.050000000    
+
+ PARAMETER CUR =    0.8500000000    
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         1
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM     0.4500000000     TO     0.8500000000    
+ Y-DISTANCES FROM      0.000000000     TO     0.4500000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     6
+
+ *IF  NDOOR  ( =   1.00000     )  GE  
+      1  ( =   1.00000     )  THEN    
+
+ PARAMETER DX1 =    0.8500000000    
+
+ PARAMETER DX2 =     1.750000000    
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         5
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM     0.8500000000     TO      1.750000000    
+ Y-DISTANCES FROM     0.1125000000     TO     0.3375000000    
+ Z-DISTANCES FROM      0.000000000     TO      2.100000000    
+
+      OUTPUT VOLUME =     7
+
+ PARAMETER CUR =     2.100000000    
+
+ *ENDIF
+
+ *IF  NDOOR  ( =   1.00000     )  GE  
+      2  ( =   2.00000     )  THEN    
+
+ *ENDIF
+
+ PARAMETER END_X =     6.050000000    
+
+ PARAMETER WIN_GAP =    0.3000000000    
+
+ *IF  NWIN  ( =   3.00000     )  GT  
+      0  ( =   0.00000     )  THEN    
+
+ PARAMETER WIN_GAP =    0.1166666667    
+
+ *IF  WIN_GAP  ( =  0.116667     )  LT  
+      0.2  ( =  0.200000     )  THEN    
+
+ PARAMETER WIN_GAP =    0.2000000000    
+
+ *ENDIF
+
+ *ENDIF
+
+ PARAMETER PREV_WIN_END =     2.100000000    
+
+ *IF  NWIN  ( =   3.00000     )  GE  
+      1  ( =   1.00000     )  THEN    
+
+ PARAMETER WX1 =     2.100000000    
+
+ PARAMETER WX2 =     3.300000000    
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         1
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM      2.100000000     TO      2.100000000    
+ Y-DISTANCES FROM      0.000000000     TO     0.4500000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+
+ *** ERROR ***                           ELAPSED TIME =       5.715   TIME= 17:26:45
+ The x-distances are the same within the tolerance.                      
+  Can not create the hexahedral volume.                                  
+
+
+ NUMBER OF WARNING MESSAGES ENCOUNTERED=          0
+ NUMBER OF ERROR   MESSAGES ENCOUNTERED=          1
+
+
+
+ ***** PROBLEM TERMINATED BY INDICATED ERROR(S) OR BY END OF INPUT DATA *****
+
++--------------------- M A P D L   S T A T I S T I C S ------------------------+
+
+Release: 2026 R1            Build: 26.1       Update: UP20260202   Platform: WINDOWS x64 
+Date Run: 08/26/2026   Time: 17:26     Process ID: 12100
+Operating System: Windows 11  (Build: 26100)
+
+Processor Model: AMD Ryzen 7 7445HS w/ Radeon 740M Graphics
+
+Compiler: Intel(R) Fortran Compiler Classic Version 2021.9  (Build: 20230302)
+          Intel(R) C/C++ Compiler Classic Version 2021.9  (Build: 20230302)
+          AOCL-BLAS 5.1.1 Build 20251008
+          Intel(R) oneAPI Math Kernel Library Version 2024.2.3-Product Build 20250403
+
+Number of machines requested            :    1
+Total number of cores available         :   12
+Number of physical cores available      :    6
+Number of processes requested           :    1
+Number of threads per process requested :    1
+Total number of cores requested         :    1 (Shared Memory Parallel)                    
+
+GPU Acceleration: Not Requested
+
+Job Name: file
+Input File: d:\SIH\simulation\jobs\60fa7797\run_design.apdl
+Working Directory: d:\SIH\simulation\jobs\60fa7797
+
+Total CPU time for main thread                    :        0.4 seconds
+Total CPU time summed for all threads             :        0.3 seconds
+
+Elapsed time spent obtaining a license            :        1.2 seconds
+Elapsed time spent pre-processing model (/PREP7)  :        0.0 seconds
+Elapsed time spent solution - preprocessing       :        0.0 seconds
+Elapsed time spent computing solution             :        0.0 seconds
+   Elapsed time in element formation & assembly   :        0.0 seconds
+   Elapsed time in equation solver                :        0.0 seconds
+   Elapsed time in element result calculations    :        0.0 seconds
+Elapsed time spent solution - postprocessing      :        0.0 seconds
+Elapsed time spent post-processing model (/POST1) :        0.0 seconds
+ 
+
+Sum of disk space used on all processes           :        0.0 MB
+
+Sum of memory used on all processes               :        7.0 MB
+Sum of memory allocated on all processes          :     1344.0 MB
+Physical memory available                         :         15 GB
+Total amount of I/O written to disk               :        0.0 GB
+Total amount of I/O read from disk                :        0.0 GB
+
++------------------ E N D   M A P D L   S T A T I S T I C S -------------------+
+
+
+ *-----------------------------------------------------------------------------*
+ |                                                                             |
+ |                               RUN COMPLETED                                 |
+ |                                                                             |
+ |-----------------------------------------------------------------------------|
+ |                                                                             |
+ |  Ansys MAPDL 2026 R1         Build 26.1         UP20260202    WINDOWS x64   |
+ |                                                                             |
+ |-----------------------------------------------------------------------------|
+ |                                                                             |
+ |  Database Requested(-db)     1024 MB     Scratch Memory Requested     64 MB |
+ |  Max Database Used(Master)      1 MB     Max Scratch Used(Master)      6 MB |
+ |  Max Database Used(Workers)     0 MB     Max Scratch Used(Workers)     0 MB |
+ |  Sum Database Used(All)         1 MB     Sum Scratch Used(All)         6 MB |
+ |                                                                             |
+ |-----------------------------------------------------------------------------|
+ |                                                                             |
+ |        CP Time      (sec) =          0.266       Time  =  17:26:56          |
+ |        Elapsed Time (sec) =         15.915       Date  =  08/26/2026        |
+ |                                                                             |
+ *-----------------------------------------------------------------------------*

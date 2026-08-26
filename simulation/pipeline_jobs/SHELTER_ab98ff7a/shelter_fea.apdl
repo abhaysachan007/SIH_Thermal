@@ -1,0 +1,63 @@
+/BATCH
+! ANSYS APDL Transient Thermal FEA for Candidate: SHELTER_ab98ff7a
+/PREP7
+*SET,SLEN,6.0
+*SET,SWID,4.0
+*SET,SHGT,2.8
+*SET,WTHK,0.25
+*SET,NWIN,1
+*SET,NDOOR,1
+*SET,SHAPE,0
+*SET,ROOFT,0
+*SET,ROOFA,0.0
+*SET,KWALL,0.35
+*SET,RHOWALL,2500.0
+*SET,CPWALL,840.0
+! Material Model 1 (Envelope Solid)
+ET,1,SOLID70
+MP,KXX,1,KWALL
+MP,DENS,1,RHOWALL
+MP,C,1,CPWALL
+! 3D Block Geometry Build
+BLC4,0,0,SLEN,SWID,SHGT
+ESIZE,0.25
+VMESH,ALL
+! Transient Solution Setup
+/SOLU
+ANTYPE,TRANS
+TRNOPT,FULL
+TUNIF,0.0
+TIME,86400
+AUTOTS,ON
+DELTIM,3600,1800,7200
+! Boundary Conditions unrolled for 24h cycle
+! Hour 0: Ambient=-18.758C
+! Hour 1: Ambient=-19.275C
+! Hour 2: Ambient=-19.793C
+! Hour 3: Ambient=-20.0C
+! Hour 4: Ambient=-19.793C
+! Hour 5: Ambient=-19.275C
+! Hour 6: Ambient=-18.24C
+! Hour 7: Ambient=-15.652C
+! Hour 8: Ambient=-12.546C
+! Hour 9: Ambient=-8.405C
+! Hour 10: Ambient=-4.264C
+! Hour 11: Ambient=-1.159C
+! Hour 12: Ambient=1.43C
+! Hour 13: Ambient=2.982C
+! Hour 14: Ambient=3.5C
+! Hour 15: Ambient=1.947C
+! Hour 16: Ambient=-0.641C
+! Hour 17: Ambient=-3.747C
+! Hour 18: Ambient=-6.852C
+! Hour 19: Ambient=-9.441C
+! Hour 20: Ambient=-12.029C
+! Hour 21: Ambient=-14.099C
+! Hour 22: Ambient=-16.17C
+! Hour 23: Ambient=-17.722C
+SOLVE
+FINISH
+/POST1
+SET,LAST
+*GET,TMIN,NODE,0,MNIT
+*GET,TMAX,NODE,0,MXIT

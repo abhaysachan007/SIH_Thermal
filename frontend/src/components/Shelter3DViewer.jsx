@@ -27,6 +27,12 @@ export default function Shelter3DViewer({
   const wallThk = parseFloat(shelterData?.wall_thickness_m || 0.45);
   const orientationDeg = parseFloat(shelterData?.orientation_deg ?? shelterData?.orientation ?? 180);
 
+  // Interactive Sun Azimuth State (allows user to scrub sun position directly on the 3D HUD)
+  const [sunAngle, setSunAngle] = useState(orientationDeg);
+  useEffect(() => {
+    setSunAngle(orientationDeg);
+  }, [orientationDeg]);
+
   // Thermal temperatures extracted from simulation result
   const maxInsideTemp = parseFloat(ansysData?.peak_inside_temp_C || ansysData?.result?.peak_inside_temp_C || 24.2);
   const minInsideTemp = parseFloat(ansysData?.min_inside_temp_C || ansysData?.result?.min_inside_temp_C || 3.1);
@@ -112,17 +118,35 @@ export default function Shelter3DViewer({
     while (container.firstChild) container.removeChild(container.firstChild);
     container.appendChild(renderer.domElement);
 
-    // --- Lighting ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, thermalMode ? 0.95 : 0.85);
+    // --- Dynamic Solar Lighting & Sun Position ---
+    const activeAzimuth = sunAngle ?? orientationDeg ?? 180;
+    const sunRad = (activeAzimuth - 90) * (Math.PI / 180);
+    const sunDist = Math.max(length, width, height_m) * 2.2;
+    const sunX = Math.cos(sunRad) * sunDist;
+    const sunZ = Math.sin(sunRad) * sunDist;
+    const sunY = Math.max(height_m * 1.6, sunDist * 0.7);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, thermalMode ? 0.75 : 0.85);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xfff3d6, thermalMode ? 0.8 : 1.3);
-    dirLight.position.set(20, 25, 20);
+    // Directional Sun Light placed EXACTLY at the Sun coordinates pointing directly at the shelter
+    const dirLight = new THREE.DirectionalLight(0xfff5db, thermalMode ? 1.1 : 1.4);
+    dirLight.position.set(sunX, sunY, sunZ);
     dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = sunDist * 3.5;
+    const d = Math.max(length, width, height_m) * 1.5;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
     scene.add(dirLight);
 
-    const fillLight = new THREE.DirectionalLight(0xd4e4ff, 0.45);
-    fillLight.position.set(-20, 15, -20);
+    // Subtle sky ambient fill from opposite side
+    const fillLight = new THREE.DirectionalLight(0xbcd7ff, 0.35);
+    fillLight.position.set(-sunX * 0.5, sunY * 0.5, -sunZ * 0.5);
     scene.add(fillLight);
 
     // --- Ground Grid ---
@@ -132,37 +156,59 @@ export default function Shelter3DViewer({
     gridHelper.position.y = -0.01;
     scene.add(gridHelper);
 
-    // --- Materials Palette (Architectural vs FLIR Infrared Thermography) ---
-    // Thermal colors:
-    // Glazing / Warmest: Red / Bright Orange (#ef4444, #f97316)
-    // South Wall: Warm Yellow-Orange (#eab308)
-    // Roof: Yellow-Green (#84cc16)
-    // North Wall / Cold: Cyan-Blue (#06b6d4, #3b82f6)
-    // Foundation: Deep Cold Blue (#1e3a8a)
+    // --- Material Colors & Dynamic Solar Exposure Gradient ---
+    // Normalized Sun vector in XZ plane
+    const sunDirNorm = new THREE.Vector3(sunX, 0, sunZ).normalize();
 
-    const southWallColor = thermalMode ? 0xf59e0b : 0xc29b74;
-    const northWallColor = thermalMode ? 0x06b6d4 : 0x9a7b56;
-    const sideWallColor  = thermalMode ? 0x84cc16 : 0xb38d65;
-    const roofColor      = thermalMode ? 0xeab308 : 0x8b5a2b;
-    const plinthColor    = thermalMode ? 0x1d4ed8 : 0x475569;
-    const glassColor     = thermalMode ? 0xef4444 : 0x60a5fa; // Hot solar windows
-    const doorColor      = thermalMode ? 0xd97706 : 0x4a2e18;
+    // Solar dot product on 4 primary facades:
+    // South (+Z), North (-Z), East (+X), West (-X)
+    const dotSouth = Math.max(0, sunDirNorm.dot(new THREE.Vector3(0, 0, 1)));
+    const dotNorth = Math.max(0, sunDirNorm.dot(new THREE.Vector3(0, 0, -1)));
+    const dotEast  = Math.max(0, sunDirNorm.dot(new THREE.Vector3(1, 0, 0)));
+    const dotWest  = Math.max(0, sunDirNorm.dot(new THREE.Vector3(-1, 0, 0)));
 
-    const sWallMat = new THREE.MeshStandardMaterial({ color: southWallColor, roughness: 0.8, wireframe });
-    const nWallMat = new THREE.MeshStandardMaterial({ color: northWallColor, roughness: 0.8, wireframe });
-    const eWallMat = new THREE.MeshStandardMaterial({ color: sideWallColor, roughness: 0.8, wireframe });
-    const wWallMat = new THREE.MeshStandardMaterial({ color: sideWallColor, roughness: 0.8, wireframe });
-    const roofMat  = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.6, wireframe });
+    // Material definition helper for Realistic Mode
+    const wallMatId = shelterData?.wall_material_id || 'mud_brick';
+    let baseArchWallColor = 0xc29b74; // Mud Brick default
+    if (wallMatId.includes('stone') || wallMatId.includes('granite')) baseArchWallColor = 0x948b7d;
+    else if (wallMatId.includes('rammed')) baseArchWallColor = 0x9c7a59;
+    else if (wallMatId.includes('composite') || wallMatId.includes('eps')) baseArchWallColor = 0xded5c7;
+    else if (wallMatId.includes('concrete')) baseArchWallColor = 0x8a8f96;
+
+    // Helper: interpolate between Cold Cyan/Blue (#06b6d4), Moderate Green (#84cc16), Warm Amber (#f59e0b), and Hot Red (#ef4444)
+    const getThermalColor = (solarExp) => {
+      if (solarExp > 0.65) return 0xf59e0b; // Bright Amber/Hot
+      if (solarExp > 0.30) return 0x84cc16; // Moderate Green/Yellow
+      return 0x06b6d4; // Cold Blue/Cyan
+    };
+
+    const southWallColor = thermalMode ? getThermalColor(dotSouth) : baseArchWallColor;
+    const northWallColor = thermalMode ? getThermalColor(dotNorth) : baseArchWallColor;
+    const eastWallColor  = thermalMode ? getThermalColor(dotEast)  : baseArchWallColor;
+    const westWallColor  = thermalMode ? getThermalColor(dotWest)  : baseArchWallColor;
+
+    const roofColor   = thermalMode ? (dotSouth > 0.3 ? 0xeab308 : 0x84cc16) : 0x8b4513;
+    const plinthColor = thermalMode ? 0x1d4ed8 : 0x475569;
+    const glassColor  = thermalMode ? (dotSouth > 0.4 ? 0xef4444 : 0x38bdf8) : 0x60a5fa;
+    const doorColor   = thermalMode ? 0xd97706 : 0x5c3a21;
+
+    const sWallMat = new THREE.MeshStandardMaterial({ color: southWallColor, roughness: 0.85, wireframe });
+    const nWallMat = new THREE.MeshStandardMaterial({ color: northWallColor, roughness: 0.85, wireframe });
+    const eWallMat = new THREE.MeshStandardMaterial({ color: eastWallColor, roughness: 0.85, wireframe });
+    const wWallMat = new THREE.MeshStandardMaterial({ color: westWallColor, roughness: 0.85, wireframe });
+    const roofMat  = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.65, wireframe });
     const plinthMat = new THREE.MeshStandardMaterial({ color: plinthColor, roughness: 0.9, wireframe });
     const floorMat = new THREE.MeshStandardMaterial({ color: thermalMode ? 0x10b981 : 0x6e5238, roughness: 0.9, wireframe });
 
     const glassMat = new THREE.MeshPhysicalMaterial({
       color: glassColor,
       transparent: true,
-      opacity: thermalMode ? 0.9 : 0.65,
+      opacity: thermalMode ? 0.92 : 0.65,
       roughness: 0.1,
-      emissive: thermalMode ? 0x7f1d1d : 0x000000,
-      emissiveIntensity: thermalMode ? 0.6 : 0,
+      metalness: 0.1,
+      transmission: thermalMode ? 0 : 0.6,
+      emissive: thermalMode ? (dotSouth > 0.4 ? 0x991b1b : 0x075985) : 0x000000,
+      emissiveIntensity: thermalMode ? 0.65 : 0,
       wireframe,
     });
 
@@ -581,22 +627,27 @@ export default function Shelter3DViewer({
       }
     }
 
-    // --- 5. Solar Vector Arrow ---
+    // --- 5. Solar Vector Ray & Sun Celestial Marker ---
     if (showSun) {
-      const rad = (orientationDeg - 90) * (Math.PI / 180);
-      const sunDist = Math.max(length, width) * 1.5;
-      const sunX = Math.cos(rad) * sunDist;
-      const sunZ = Math.sin(rad) * sunDist;
-      const sunY = height_m * 1.4;
-
-      const sunSphereGeo = new THREE.SphereGeometry(0.35, 16, 16);
-      const sunSphereMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+      // Celestial Glowing Sun Sphere
+      const sunSphereGeo = new THREE.SphereGeometry(Math.max(0.4, Math.max(length, width) * 0.08), 24, 24);
+      const sunSphereMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
       const sunSphere = new THREE.Mesh(sunSphereGeo, sunSphereMat);
       sunSphere.position.set(sunX, sunY, sunZ);
       scene.add(sunSphere);
 
-      const dir = new THREE.Vector3(0, height_m / 2, 0).sub(new THREE.Vector3(sunX, sunY, sunZ)).normalize();
-      const arrowHelper = new THREE.ArrowHelper(dir, new THREE.Vector3(sunX, sunY, sunZ), sunDist * 0.9, 0xf59e0b, 0.6, 0.3);
+      // Sun Corona Glow
+      const glowGeo = new THREE.SphereGeometry(Math.max(0.6, Math.max(length, width) * 0.12), 16, 16);
+      const glowMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35 });
+      const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+      glowMesh.position.set(sunX, sunY, sunZ);
+      scene.add(glowMesh);
+
+      // Solar Incident Vector Arrow pointing directly into the shelter center
+      const targetPoint = new THREE.Vector3(0, height_m * 0.5, 0);
+      const dir = new THREE.Vector3().subVectors(targetPoint, new THREE.Vector3(sunX, sunY, sunZ)).normalize();
+      const arrowLength = sunDist * 0.85;
+      const arrowHelper = new THREE.ArrowHelper(dir, new THREE.Vector3(sunX, sunY, sunZ), arrowLength, 0xf59e0b, 0.8, 0.4);
       scene.add(arrowHelper);
     }
 
@@ -670,7 +721,7 @@ export default function Shelter3DViewer({
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
     };
-  }, [shape, length, width, height_m, wallThk, orientationDeg, wireframe, showRoof, showSun, thermalMode, roofType, rawOpenings, maxInsideTemp, minInsideTemp]);
+  }, [shape, length, width, height_m, wallThk, orientationDeg, sunAngle, wireframe, showRoof, showSun, thermalMode, roofType, rawOpenings, maxInsideTemp, minInsideTemp]);
 
   const handleOpenGui = async () => {
     setIsLaunching(true);
@@ -686,59 +737,58 @@ export default function Shelter3DViewer({
     }
   };
 
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      {/* Header Tabs */}
-      <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 px-5 py-3.5 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse" />
-          <h3 className="font-bold text-primary text-base">
-            Realistic 3D House & Thermal Infrared Heatmap
-          </h3>
+  return (    <div className="rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden shadow-lg">
+      {/* CAD Viewport Header */}
+      <div className="bg-slate-900/90 border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="font-mono font-bold text-slate-200 uppercase tracking-wider text-[11px]">
+            WebGL 3D Engine · {shape === 'dome' ? 'Igloo Hemisphere CAD' : 'Alpine Gable Shelter CAD'}
+          </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveAnsysTab('3d_interactive')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              activeAnsysTab === '3d_interactive'
-                ? 'bg-primary text-white shadow-sm'
-                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-            }`}
-          >
-            Interactive 3D View
-          </button>
-
+        {/* View Selection & ANSYS Launch Controls */}
+        <div className="flex flex-wrap items-center gap-2">
           {hasAnsysImages && (
-            <>
+            <div className="flex rounded-lg overflow-hidden border border-slate-700 bg-slate-800 p-0.5 font-mono text-[11px]">
+              <button
+                type="button"
+                onClick={() => setActiveAnsysTab('3d_interactive')}
+                className={`px-2.5 py-1 rounded font-medium transition-all ${
+                  activeAnsysTab === '3d_interactive'
+                    ? 'bg-sky-600 text-white shadow-sm font-semibold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Interactive 3D
+              </button>
               {volumesImg && (
                 <button
                   type="button"
                   onClick={() => setActiveAnsysTab('ansys_volumes')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-2.5 py-1 rounded font-medium transition-all ${
                     activeAnsysTab === 'ansys_volumes'
-                      ? 'bg-accent text-white shadow-sm'
-                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                      ? 'bg-sky-600 text-white shadow-sm font-semibold'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  ANSYS Volumes Plot
+                  ANSYS VPLOT
                 </button>
               )}
               {meshImg && (
                 <button
                   type="button"
                   onClick={() => setActiveAnsysTab('ansys_mesh')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-2.5 py-1 rounded font-medium transition-all ${
                     activeAnsysTab === 'ansys_mesh'
-                      ? 'bg-accent text-white shadow-sm'
-                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                      ? 'bg-sky-600 text-white shadow-sm font-semibold'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  ANSYS FEA Mesh
+                  ANSYS Mesh
                 </button>
               )}
-            </>
+            </div>
           )}
 
           {allowLaunchGui && (
@@ -746,9 +796,10 @@ export default function Shelter3DViewer({
               type="button"
               onClick={handleOpenGui}
               disabled={isLaunching}
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 disabled:opacity-50 text-slate-200 hover:text-white rounded-lg text-xs font-mono font-medium shadow-sm flex items-center gap-2 transition-all"
             >
-              <span>{isLaunching ? 'Launching...' : 'Open in ANSYS GUI'}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span>{isLaunching ? 'Launching MAPDL…' : 'Open in ANSYS GUI'}</span>
             </button>
           )}
         </div>
@@ -756,130 +807,160 @@ export default function Shelter3DViewer({
 
       {/* GUI Status Alert */}
       {guiStatus && (
-        <div className={`px-4 py-3 text-xs font-semibold ${
+        <div className={`px-4 py-2.5 text-xs font-mono border-b ${
           guiStatus.success
-            ? 'bg-emerald-50 text-emerald-900 border-b border-emerald-200'
-            : 'bg-red-50 text-red-800 border-b border-red-200'
+            ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+            : 'bg-rose-950/80 text-rose-300 border-rose-800'
         }`}>
-          <div>{guiStatus.success || guiStatus.error}</div>
-          {guiStatus.success && (
-            <div className="mt-1 font-normal text-emerald-800">
-              Tip in ANSYS: Enter <code>/VIEW,1,1.2,-1.8,1.0</code> then <code>VPLOT</code> to view front 3D volumes.
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <span className="font-bold">{guiStatus.success ? '✓' : '⚠️'}</span>
+            <span>{guiStatus.success || guiStatus.error}</span>
+          </div>
         </div>
       )}
 
-      {/* Main View Area */}
-      <div className="relative">
+      {/* Main Viewport Area */}
+      <div className="relative bg-slate-950">
         {/* Interactive 3D WebGL Tab */}
         {activeAnsysTab === '3d_interactive' && (
           <div className="relative">
             <div
               ref={mountRef}
               style={{ width: '100%', height: height }}
-              className="cursor-grab active:cursor-grabbing"
+              className="cursor-grab active:cursor-grabbing outline-none"
             />
 
-            {/* Overlay Toolbar Controls (Left) */}
-            <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md rounded-xl p-2.5 shadow-lg border border-gray-200 flex flex-col gap-2 text-xs">
+            {/* Overlay Toolbar Controls (Left CAD HUD) */}
+            <div className="absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md rounded-xl p-2.5 shadow-xl border border-slate-700/80 flex flex-col gap-2 text-xs text-white">
               {/* Thermal Mode Switch */}
               <button
                 type="button"
                 onClick={() => setThermalMode(!thermalMode)}
-                className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-lg font-mono text-[11px] font-bold flex items-center gap-2 transition-all border ${
                   thermalMode
-                    ? 'bg-gradient-to-r from-red-600 via-amber-500 to-blue-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-gradient-to-r from-rose-600 via-amber-500 to-sky-600 text-white border-white/20 shadow-md'
+                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
                 }`}
               >
-                <span>{thermalMode ? '🔥 IR Thermal Vision: ON' : '🏠 Architecture Mode'}</span>
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                <span>{thermalMode ? 'FLIR Thermography: ON' : 'CAD Shaded Mode'}</span>
               </button>
 
               {/* Roof Style Toggle */}
-              <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-100">
-                <span className="font-semibold text-gray-600">Roof:</span>
-                <div className="flex rounded-md overflow-hidden border border-gray-300 text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => setRoofType('pitched')}
-                    className={`px-2 py-0.5 font-bold ${roofType === 'pitched' ? 'bg-primary text-white' : 'bg-white text-gray-600'}`}
-                  >
-                    Gable
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRoofType('flat')}
-                    className={`px-2 py-0.5 font-bold ${roofType === 'flat' ? 'bg-primary text-white' : 'bg-white text-gray-600'}`}
-                  >
-                    Flat
-                  </button>
+              {shape !== 'dome' && (
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800 font-mono text-[11px]">
+                  <span className="text-slate-400">Roof Style:</span>
+                  <div className="flex rounded-md overflow-hidden border border-slate-700 bg-slate-800 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setRoofType('pitched')}
+                      className={`px-2 py-0.5 rounded ${roofType === 'pitched' ? 'bg-sky-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      Gable
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRoofType('flat')}
+                      className={`px-2 py-0.5 rounded ${roofType === 'flat' ? 'bg-sky-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      Flat
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <label className="flex items-center gap-2 font-medium text-gray-700 cursor-pointer hover:text-primary pt-1 border-t border-gray-100">
+              <label className="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white pt-1 border-t border-slate-800 font-mono text-[11px]">
                 <input
                   type="checkbox"
                   checked={showRoof}
                   onChange={(e) => setShowRoof(e.target.checked)}
-                  className="accent-primary rounded"
+                  className="accent-sky-500 rounded bg-slate-800 border-slate-700"
                 />
-                <span>Roof (Cutaway)</span>
+                <span>Roof Cutaway</span>
               </label>
 
-              <label className="flex items-center gap-2 font-medium text-gray-700 cursor-pointer hover:text-primary">
+              <label className="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white font-mono text-[11px]">
                 <input
                   type="checkbox"
                   checked={wireframe}
                   onChange={(e) => setWireframe(e.target.checked)}
-                  className="accent-primary rounded"
+                  className="accent-sky-500 rounded bg-slate-800 border-slate-700"
                 />
-                <span>Wireframe Mesh</span>
+                <span>FEA Wireframe</span>
               </label>
 
-              <label className="flex items-center gap-2 font-medium text-gray-700 cursor-pointer hover:text-primary">
+              <label className="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white font-mono text-[11px]">
                 <input
                   type="checkbox"
                   checked={showSun}
                   onChange={(e) => setShowSun(e.target.checked)}
-                  className="accent-primary rounded"
+                  className="accent-sky-500 rounded bg-slate-800 border-slate-700"
                 />
                 <span>Solar Vector</span>
               </label>
+
+              {/* Live Sun Orbit Phase Slider */}
+              {showSun && (
+                <div className="pt-2 border-t border-slate-800 space-y-1.5 font-mono text-[11px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-amber-400 font-bold flex items-center gap-1">
+                      <span>☀️</span> Sun Angle:
+                    </span>
+                    <span className="text-slate-200 font-bold">
+                      {Math.round(sunAngle)}° ({sunAngle <= 45 || sunAngle >= 315 ? 'North' : sunAngle < 135 ? 'East' : sunAngle <= 225 ? 'South' : 'West'})
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="360"
+                    step="5"
+                    value={sunAngle}
+                    onChange={(e) => setSunAngle(parseFloat(e.target.value))}
+                    className="w-full accent-amber-400 h-1.5 bg-slate-800 rounded cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[9px] text-slate-400 pt-0.5">
+                    <button type="button" onClick={() => setSunAngle(90)} className="hover:text-amber-300">East 90°</button>
+                    <button type="button" onClick={() => setSunAngle(180)} className="hover:text-amber-300 font-bold text-amber-400">South 180°</button>
+                    <button type="button" onClick={() => setSunAngle(270)} className="hover:text-amber-300">West 270°</button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* FLIR Infrared Thermal Temperature Scale Bar (Right) */}
             {thermalMode && (
-              <div className="absolute top-3 right-3 bg-black/85 backdrop-blur-md rounded-xl p-2.5 border border-slate-700 shadow-2xl flex flex-col items-center text-white text-[11px] select-none">
-                <span className="font-extrabold text-red-400 mb-1">{maxInsideTemp.toFixed(1)}°C</span>
+              <div className="absolute top-3 right-3 bg-slate-900/90 backdrop-blur-md rounded-xl p-2.5 border border-slate-700 shadow-2xl flex flex-col items-center text-white text-[11px] font-mono select-none">
+                <span className="font-bold text-rose-400 mb-1">+{maxInsideTemp.toFixed(1)}°C</span>
                 <div
-                  className="w-4 rounded-sm shadow-inner my-1"
+                  className="w-3 rounded-sm my-1 shadow-inner"
                   style={{
-                    height: '160px',
+                    height: '150px',
                     background: 'linear-gradient(to bottom, #ffffff, #ef4444, #f97316, #eab308, #84cc16, #06b6d4, #1d4ed8, #050b14)',
                   }}
                 />
-                <span className="font-extrabold text-cyan-400 mt-1">{minInsideTemp.toFixed(1)}°C</span>
-                <span className="text-[9px] text-gray-400 font-semibold tracking-wider mt-1">FLIR IR</span>
+                <span className="font-bold text-sky-400 mt-1">{minInsideTemp.toFixed(1)}°C</span>
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">FLIR IR</span>
               </div>
             )}
 
-            {/* Instruction Tip */}
-            <div className="absolute bottom-3 left-3 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1 text-[11px] text-gray-500 font-medium border border-gray-200 shadow-sm">
-              Click & Drag to Rotate | Scroll to Zoom
+            {/* Instruction Navigation Hint */}
+            <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-sm rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-400 border border-slate-800 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+              <span>Rotate: Left Click · Pan: Right Click · Zoom: Wheel</span>
             </div>
           </div>
         )}
 
         {/* ANSYS Volumes Render Tab */}
         {activeAnsysTab === 'ansys_volumes' && volumesImg && (
-          <div className="p-4 bg-slate-900 flex flex-col items-center justify-center min-h-[380px]">
+          <div className="p-6 bg-slate-950 flex flex-col items-center justify-center min-h-[380px]">
             <img
               src={volumesImg}
               alt="ANSYS 3D Volumes Model"
-              className="max-h-[360px] object-contain rounded-lg border border-slate-700 shadow-2xl"
+              className="max-h-[360px] object-contain rounded-xl border border-slate-800 shadow-2xl"
             />
-            <p className="text-xs text-slate-300 font-semibold mt-3">
+            <p className="text-xs font-mono text-slate-400 mt-3">
               ANSYS MAPDL 3D Solid Model Volume Plot (VPLOT)
             </p>
           </div>
@@ -887,36 +968,36 @@ export default function Shelter3DViewer({
 
         {/* ANSYS FEA Mesh Render Tab */}
         {activeAnsysTab === 'ansys_mesh' && meshImg && (
-          <div className="p-4 bg-slate-900 flex flex-col items-center justify-center min-h-[380px]">
+          <div className="p-6 bg-slate-950 flex flex-col items-center justify-center min-h-[380px]">
             <img
               src={meshImg}
               alt="ANSYS 3D FEA Mesh"
-              className="max-h-[360px] object-contain rounded-lg border border-slate-700 shadow-2xl"
+              className="max-h-[360px] object-contain rounded-xl border border-slate-800 shadow-2xl"
             />
-            <p className="text-xs text-slate-300 font-semibold mt-3">
+            <p className="text-xs font-mono text-slate-400 mt-3">
               ANSYS MAPDL 3D Finite Element Mesh (EPLOT)
             </p>
           </div>
         )}
       </div>
 
-      {/* Model Spec Footer Bar */}
-      <div className="bg-gray-50 px-5 py-3 border-t border-gray-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+      {/* Model Spec Engineering Telemetry Bar */}
+      <div className="bg-slate-900/95 px-5 py-3 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
         <div>
-          <span className="text-gray-500 block">House Design:</span>
-          <span className="font-bold text-primary">{roofType === 'pitched' ? 'Alpine Gable House' : 'Flat Roof Shelter'}</span>
+          <span className="text-slate-400 block text-[10px] uppercase">Envelope Form:</span>
+          <span className="font-semibold text-slate-200">{shape === 'dome' ? 'Igloo Hemisphere' : roofType === 'pitched' ? 'Alpine Gable Pitched' : 'Flat Slab Overhang'}</span>
         </div>
         <div>
-          <span className="text-gray-500 block">Thermal Envelope:</span>
-          <span className="font-bold text-gray-800">{length}m × {width}m ({wallThk * 100}cm wall)</span>
+          <span className="text-slate-400 block text-[10px] uppercase">Dimensions:</span>
+          <span className="font-semibold text-slate-200">{length}m × {width}m × {height_m}m</span>
         </div>
         <div>
-          <span className="text-gray-500 block">Thermal IR Range:</span>
-          <span className="font-bold text-amber-600">{minInsideTemp.toFixed(1)}°C → {maxInsideTemp.toFixed(1)}°C</span>
+          <span className="text-slate-400 block text-[10px] uppercase">Wall Assembly:</span>
+          <span className="font-semibold text-sky-400">{(wallThk * 100).toFixed(0)}cm Mud Brick</span>
         </div>
         <div>
-          <span className="text-gray-500 block">Orientation:</span>
-          <span className="font-bold text-accent">{orientationDeg}° ({orientationDeg === 180 ? 'South Solar Facade' : 'Facing'})</span>
+          <span className="text-slate-400 block text-[10px] uppercase">Solar Azimuth:</span>
+          <span className="font-semibold text-amber-400">{orientationDeg}° ({orientationDeg === 180 ? 'South Direct' : 'Offset'})</span>
         </div>
       </div>
     </div>

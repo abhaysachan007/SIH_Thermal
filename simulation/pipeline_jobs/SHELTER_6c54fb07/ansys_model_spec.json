@@ -1,0 +1,411 @@
+{
+  "candidate_id": "SHELTER_6c54fb07",
+  "variant_label": "Granite Stone + 5cm MINERAL | Flat",
+  "geometry": {
+    "shape": "rectangle",
+    "length_m": 6.0,
+    "width_m": 4.0,
+    "wall_height_m": 2.8,
+    "orientation_deg": 180.0,
+    "roof": {
+      "type": "flat",
+      "angle_deg": 0.0,
+      "thickness_m": 0.22,
+      "material_id": "mud_brick"
+    }
+  },
+  "walls": {
+    "wall_type": "composite",
+    "total_thickness_m": 0.4,
+    "layers": [
+      {
+        "layer_index": 1,
+        "layer_type": "outer",
+        "material_id": "granite_stone",
+        "thickness_m": 0.25,
+        "properties": {
+          "id": "granite_stone",
+          "name": "Stone (Granite)",
+          "thermal_conductivity": 2.9,
+          "density": 2640.0,
+          "specific_heat": 790.0,
+          "solar_absorptivity": 0.75,
+          "solar_reflectivity": 0.25,
+          "solar_transmissivity": 0.0,
+          "emissivity": 0.85,
+          "shgc": 0.0,
+          "cost_index_per_m3": 210.0
+        }
+      },
+      {
+        "layer_index": 2,
+        "layer_type": "insulation",
+        "material_id": "mineral_wool",
+        "thickness_m": 0.05,
+        "properties": {
+          "id": "mineral_wool",
+          "name": "Mineral Rock Wool",
+          "thermal_conductivity": 0.04,
+          "density": 80.0,
+          "specific_heat": 840.0,
+          "solar_absorptivity": 0.2,
+          "solar_reflectivity": 0.8,
+          "solar_transmissivity": 0.0,
+          "emissivity": 0.9,
+          "shgc": 0.0,
+          "cost_index_per_m3": 400.0
+        }
+      },
+      {
+        "layer_index": 3,
+        "layer_type": "inner",
+        "material_id": "mud_brick",
+        "thickness_m": 0.1,
+        "properties": {
+          "id": "mud_brick",
+          "name": "Mud Brick (Adobe)",
+          "thermal_conductivity": 0.52,
+          "density": 1700.0,
+          "specific_heat": 879.0,
+          "solar_absorptivity": 0.7,
+          "solar_reflectivity": 0.3,
+          "solar_transmissivity": 0.0,
+          "emissivity": 0.9,
+          "shgc": 0.0,
+          "cost_index_per_m3": 120.0
+        }
+      }
+    ]
+  },
+  "floor": {
+    "material_id": "rammed_earth",
+    "thickness_m": 0.15,
+    "properties": {
+      "id": "rammed_earth",
+      "name": "Rammed Earth",
+      "thermal_conductivity": 0.85,
+      "density": 2000.0,
+      "specific_heat": 840.0,
+      "solar_absorptivity": 0.72,
+      "solar_reflectivity": 0.28,
+      "solar_transmissivity": 0.0,
+      "emissivity": 0.9,
+      "shgc": 0.0,
+      "cost_index_per_m3": 110.0
+    }
+  },
+  "openings": {
+    "windows": [
+      {
+        "id": "WIN_S1",
+        "wall": "south",
+        "position_x_m": 2.075,
+        "position_z_m": 0.9,
+        "width_m": 1.2,
+        "height_m": 1.2,
+        "glazing_material_id": "double_glazing",
+        "glazing_properties": {
+          "id": "double_glazing",
+          "name": "Double Glazing (4-12-4 Low-E)",
+          "thermal_conductivity": 0.35,
+          "density": 2500.0,
+          "specific_heat": 840.0,
+          "solar_absorptivity": 0.1,
+          "solar_reflectivity": 0.18,
+          "solar_transmissivity": 0.72,
+          "emissivity": 0.84,
+          "shgc": 0.62,
+          "u_value": 2.8,
+          "cost_index_per_m2": 150.0
+        }
+      },
+      {
+        "id": "WIN_S2",
+        "wall": "south",
+        "position_x_m": 4.025,
+        "position_z_m": 0.9,
+        "width_m": 1.2,
+        "height_m": 1.2,
+        "glazing_material_id": "double_glazing",
+        "glazing_properties": {
+          "id": "double_glazing",
+          "name": "Double Glazing (4-12-4 Low-E)",
+          "thermal_conductivity": 0.35,
+          "density": 2500.0,
+          "specific_heat": 840.0,
+          "solar_absorptivity": 0.1,
+          "solar_reflectivity": 0.18,
+          "solar_transmissivity": 0.72,
+          "emissivity": 0.84,
+          "shgc": 0.62,
+          "u_value": 2.8,
+          "cost_index_per_m2": 150.0
+        }
+      }
+    ],
+    "doors": [
+      {
+        "id": "DOOR_S1",
+        "wall": "south",
+        "position_x_m": 0.4,
+        "position_z_m": 0.0,
+        "width_m": 0.9,
+        "height_m": 2.1,
+        "glazing_material_id": "insulated_door",
+        "glazing_properties": {
+          "id": "insulated_door",
+          "name": "Insulated Solid Wood Door with Thermal Core",
+          "thermal_conductivity": 0.08,
+          "density": 600.0,
+          "specific_heat": 1400.0,
+          "solar_absorptivity": 0.6,
+          "solar_reflectivity": 0.4,
+          "solar_transmissivity": 0.0,
+          "emissivity": 0.9,
+          "shgc": 0.0,
+          "u_value": 1.8,
+          "cost_index_per_unit": 200.0
+        }
+      }
+    ],
+    "skylights": []
+  },
+  "materials": [
+    {
+      "id": "double_glazing",
+      "name": "Double Glazing (4-12-4 Low-E)",
+      "thermal_conductivity": 0.35,
+      "density": 2500.0,
+      "specific_heat": 840.0,
+      "solar_absorptivity": 0.1,
+      "solar_reflectivity": 0.18,
+      "solar_transmissivity": 0.72,
+      "emissivity": 0.84,
+      "shgc": 0.62,
+      "u_value": 2.8,
+      "cost_index_per_m2": 150.0
+    },
+    {
+      "id": "insulated_door",
+      "name": "Insulated Solid Wood Door with Thermal Core",
+      "thermal_conductivity": 0.08,
+      "density": 600.0,
+      "specific_heat": 1400.0,
+      "solar_absorptivity": 0.6,
+      "solar_reflectivity": 0.4,
+      "solar_transmissivity": 0.0,
+      "emissivity": 0.9,
+      "shgc": 0.0,
+      "u_value": 1.8,
+      "cost_index_per_unit": 200.0
+    },
+    {
+      "id": "mineral_wool",
+      "name": "Mineral Rock Wool",
+      "thermal_conductivity": 0.04,
+      "density": 80.0,
+      "specific_heat": 840.0,
+      "solar_absorptivity": 0.2,
+      "solar_reflectivity": 0.8,
+      "solar_transmissivity": 0.0,
+      "emissivity": 0.9,
+      "shgc": 0.0,
+      "cost_index_per_m3": 400.0
+    },
+    {
+      "id": "granite_stone",
+      "name": "Stone (Granite)",
+      "thermal_conductivity": 2.9,
+      "density": 2640.0,
+      "specific_heat": 790.0,
+      "solar_absorptivity": 0.75,
+      "solar_reflectivity": 0.25,
+      "solar_transmissivity": 0.0,
+      "emissivity": 0.85,
+      "shgc": 0.0,
+      "cost_index_per_m3": 210.0
+    },
+    {
+      "id": "mud_brick",
+      "name": "Mud Brick (Adobe)",
+      "thermal_conductivity": 0.52,
+      "density": 1700.0,
+      "specific_heat": 879.0,
+      "solar_absorptivity": 0.7,
+      "solar_reflectivity": 0.3,
+      "solar_transmissivity": 0.0,
+      "emissivity": 0.9,
+      "shgc": 0.0,
+      "cost_index_per_m3": 120.0
+    },
+    {
+      "id": "rammed_earth",
+      "name": "Rammed Earth",
+      "thermal_conductivity": 0.85,
+      "density": 2000.0,
+      "specific_heat": 840.0,
+      "solar_absorptivity": 0.72,
+      "solar_reflectivity": 0.28,
+      "solar_transmissivity": 0.0,
+      "emissivity": 0.9,
+      "shgc": 0.0,
+      "cost_index_per_m3": 110.0
+    }
+  ],
+  "climate": {
+    "latitude_deg": 34.15,
+    "season": "winter",
+    "time_series": [
+      {
+        "hour": 0,
+        "ambient_temperature_c": -18.758,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.5
+      },
+      {
+        "hour": 1,
+        "ambient_temperature_c": -19.275,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.2
+      },
+      {
+        "hour": 2,
+        "ambient_temperature_c": -19.793,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.0
+      },
+      {
+        "hour": 3,
+        "ambient_temperature_c": -20.0,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.0
+      },
+      {
+        "hour": 4,
+        "ambient_temperature_c": -19.793,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.0
+      },
+      {
+        "hour": 5,
+        "ambient_temperature_c": -19.275,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.2
+      },
+      {
+        "hour": 6,
+        "ambient_temperature_c": -18.24,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.5
+      },
+      {
+        "hour": 7,
+        "ambient_temperature_c": -15.652,
+        "solar_irradiance_w_m2": 120.0,
+        "wind_speed_m_s": 2.0
+      },
+      {
+        "hour": 8,
+        "ambient_temperature_c": -12.546,
+        "solar_irradiance_w_m2": 380.0,
+        "wind_speed_m_s": 2.5
+      },
+      {
+        "hour": 9,
+        "ambient_temperature_c": -8.405,
+        "solar_irradiance_w_m2": 620.0,
+        "wind_speed_m_s": 3.0
+      },
+      {
+        "hour": 10,
+        "ambient_temperature_c": -4.264,
+        "solar_irradiance_w_m2": 810.0,
+        "wind_speed_m_s": 3.5
+      },
+      {
+        "hour": 11,
+        "ambient_temperature_c": -1.159,
+        "solar_irradiance_w_m2": 900.0,
+        "wind_speed_m_s": 3.5
+      },
+      {
+        "hour": 12,
+        "ambient_temperature_c": 1.43,
+        "solar_irradiance_w_m2": 940.0,
+        "wind_speed_m_s": 3.0
+      },
+      {
+        "hour": 13,
+        "ambient_temperature_c": 2.982,
+        "solar_irradiance_w_m2": 920.0,
+        "wind_speed_m_s": 3.0
+      },
+      {
+        "hour": 14,
+        "ambient_temperature_c": 3.5,
+        "solar_irradiance_w_m2": 850.0,
+        "wind_speed_m_s": 2.5
+      },
+      {
+        "hour": 15,
+        "ambient_temperature_c": 1.947,
+        "solar_irradiance_w_m2": 680.0,
+        "wind_speed_m_s": 2.5
+      },
+      {
+        "hour": 16,
+        "ambient_temperature_c": -0.641,
+        "solar_irradiance_w_m2": 440.0,
+        "wind_speed_m_s": 2.0
+      },
+      {
+        "hour": 17,
+        "ambient_temperature_c": -3.747,
+        "solar_irradiance_w_m2": 190.0,
+        "wind_speed_m_s": 2.0
+      },
+      {
+        "hour": 18,
+        "ambient_temperature_c": -6.852,
+        "solar_irradiance_w_m2": 30.0,
+        "wind_speed_m_s": 1.8
+      },
+      {
+        "hour": 19,
+        "ambient_temperature_c": -9.441,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.5
+      },
+      {
+        "hour": 20,
+        "ambient_temperature_c": -12.029,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.5
+      },
+      {
+        "hour": 21,
+        "ambient_temperature_c": -14.099,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.3
+      },
+      {
+        "hour": 22,
+        "ambient_temperature_c": -16.17,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.2
+      },
+      {
+        "hour": 23,
+        "ambient_temperature_c": -17.722,
+        "solar_irradiance_w_m2": 0.0,
+        "wind_speed_m_s": 1.2
+      }
+    ]
+  },
+  "simulation": {
+    "analysis_type": "transient_thermal",
+    "element_type": "SOLID70",
+    "time_step_seconds": 3600,
+    "simulation_duration_seconds": 86400
+  }
+}

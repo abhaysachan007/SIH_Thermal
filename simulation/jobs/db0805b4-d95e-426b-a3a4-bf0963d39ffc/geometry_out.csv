@@ -1,0 +1,15 @@
+PARAM,VALUE
+length_m,6
+width_m,4
+height_m,3
+wall_thi,0.45
+num_wind,3
+num_door,1
+shape_ty,0
+roof_typ,1
+wall_are,60
+south_wa,12
+roof_are,24
+floor_ar,24
+interior,72
+total_no,3399

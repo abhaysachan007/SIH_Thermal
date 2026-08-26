@@ -32,4 +32,6 @@ export const pollUntilDone = async (jobId, isCompare = false, onProgress = null)
 export const openAnsysGui = (jobId, payload = null) =>
   API.post(`/api/jobs/${jobId}/open-ansys`, payload).then(r => r.data);
 
+export const runOptimizer = (shelterInput) =>
+  API.post('/api/optimize', shelterInput).then(r => r.data);
 

@@ -1,0 +1,61 @@
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       14:30:11
+
+ *** ERROR ***                           ELAPSED TIME =       5.598   TIME= 14:30:12
+ The x-distances are the same within the tolerance.                      
+  Can not create the hexahedral volume.                                  
+
+ *** WARNING ***                         ELAPSED TIME =       5.599   TIME= 14:30:12
+ WHILE PROCESSING FILE BASED INPUT (/INPUT OR MACRO) AN ERROR HAS        
+ OCCURRED.  SHOULD INPUT PROCESSING BE SUSPENDED?                        
+
+ *** WARNING ***                         ELAPSED TIME =       5.631   TIME= 14:30:12
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.631   TIME= 14:30:12
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.632   TIME= 14:30:12
+ Invalid color identifier specified in /COLOR command.                   
+
+ *** WARNING ***                         ELAPSED TIME =       5.632   TIME= 14:30:12
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.632   TIME= 14:30:12
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.632   TIME= 14:30:12
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.632   TIME= 14:30:12
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.635   TIME= 14:30:12
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.635   TIME= 14:30:12
+ Invalid color identifier specified in /COLOR command.                   
+
+ *** WARNING ***                         ELAPSED TIME =       5.635   TIME= 14:30:12
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.636   TIME= 14:30:12
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.636   TIME= 14:30:12
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.636   TIME= 14:30:12
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =      24.327   TIME= 14:30:31
+ VLPOT is not a recognized PREP7 command, abbreviation, or macro.        
+  This command will be ignored.                                          
+
+ *** WARNING ***                         ELAPSED TIME =    2547.924   TIME= 15:12:35
+ Incorrect or incomplete fields within /RGB command.                     
+
+ *** WARNING ***                         ELAPSED TIME =    2557.148   TIME= 15:12:44
+ Incorrect or incomplete fields within /RGB command.                     
+
+ *** WARNING ***                         ELAPSED TIME =    2567.395   TIME= 15:12:54
+ Incorrect or incomplete fields within /RGB command.                     

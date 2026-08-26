@@ -58,3 +58,30 @@ async def trigger_open_ansys_gui(job_id: str, payload: dict = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/optimize")
+async def optimize_shelter(payload: dict):
+    """
+    AI Auto-Optimizer: runs a 36-design parameter sweep using FDM
+    and returns the top 3 optimal designs scored by warmth, comfort,
+    efficiency, and cost. The user's geometry (L/W/H) is kept fixed;
+    only material, thickness, windows, and orientation are varied.
+    """
+    from app.services.optimizer import run_optimizer
+
+    svc = get_simulation_service()
+
+    # Wrap payload dict as attribute-accessible object
+    class _Base:
+        pass
+    base = _Base()
+    for k, v in payload.items():
+        setattr(base, k, v)
+
+    climate_id = payload.get("climate_profile_id", "ladakh_winter")
+    climate    = svc.climate_db.get(climate_id) or list(svc.climate_db.values())[0]
+
+    try:
+        result = await run_optimizer(base, svc.materials_db, climate)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Optimizer error: {e}")

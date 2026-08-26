@@ -1,0 +1,642 @@
+
+ Ansys Mechanical Enterprise Academic Student      
+
+
+ *------------------------------------------------------------------*
+ |                                                                  |
+ |   W E L C O M E   T O   T H E   A N S Y S (R)  P R O G R A M     |
+ |                                                                  |
+ *------------------------------------------------------------------*
+
+
+
+
+ ***************************************************************
+ *         ANSYS MAPDL 2026 R1          LEGAL NOTICES          *
+ ***************************************************************
+ *                                                             *
+ * Copyright (c) 2026 Synopsys, Inc. and ANSYS, Inc.           *
+ * All rights reserved.                                        *
+ * Unauthorized use, distribution or duplication is            *
+ * prohibited.                                                 *
+ *                                                             *
+ * Ansys is a registered trademark of Ansys, Inc. or its       *
+ * subsidiaries in the United States or other countries.       *
+ * See the Ansys, Inc. online documentation or the Ansys, Inc. *
+ * documentation CD or online help for the complete Legal      *
+ * Notice.                                                     *
+ *                                                             *
+ ***************************************************************
+ *                                                             *
+ * THIS ANSYS SOFTWARE PRODUCT AND PROGRAM DOCUMENTATION       *
+ * INCLUDE TRADE SECRETS AND CONFIDENTIAL AND PROPRIETARY      *
+ * PRODUCTS OF ANSYS, INC., ITS SUBSIDIARIES, OR LICENSORS.    *
+ * The software products and documentation are furnished by    *
+ * Ansys, Inc. or its subsidiaries under a software license    *
+ * agreement that contains provisions concerning               *
+ * non-disclosure, copying, length and nature of use,          *
+ * compliance with exporting laws, warranties, disclaimers,    *
+ * limitations of liability, and remedies, and other           *
+ * provisions.  The software products and documentation may be *
+ * used, disclosed, transferred, or copied only in accordance  *
+ * with the terms and conditions of that software license      *
+ * agreement.                                                  *
+ *                                                             *
+ * Ansys, Inc. is a UL registered                              *
+ * ISO 9001:2015 company.                                      *
+ *                                                             *
+ ***************************************************************
+ *                                                             *
+ * This product is subject to U.S. laws governing export and   *
+ * re-export.                                                  *
+ *                                                             *
+ * For U.S. Government users, except as specifically granted   *
+ * by the Ansys, Inc. software license agreement, the use,     *
+ * duplication, or disclosure by the United States Government  *
+ * is subject to restrictions stated in the Ansys, Inc.        *
+ * software license agreement and FAR 12.212 (for non-DOD      *
+ * licenses).                                                  *
+ *                                                             *
+ ***************************************************************
+
+ 2026 R1 
+     
+ Point Releases and Patches installed:   
+     
+ Ansys, Inc. License Manager 2026 R1 
+ Discovery (full install) 2026 R1
+ Core WB Files 2026 R1   
+ optiSLang Core UI 2026 R1   
+ CFX (includes CFD-Post) 2026 R1 
+ Chemkin 2026 R1 
+ EnSight 2026 R1 
+ FENSAP-ICE 2026 R1  
+ Fluent (includes CFD-Post) 2026 R1  
+ Polyflow (includes CFD-Post) 2026 R1
+ Forte (includes EnSight) 2026 R1
+ Rocky 2026 R1   
+ TurboGrid 2026 R1   
+ ACIS Geometry Interface 2026 R1 
+ AutoCAD Geometry Interface 2026 R1  
+ Catia, Version 4 Geometry Interface 2026 R1 
+ Catia, Version 5 Geometry Interface 2026 R1 
+ Catia, Version 6 Geometry Interface 2026 R1 
+ Creo Elements/Direct Modeling Geometry Interface 2026 R1
+ Creo Parametric Geometry Interface 2026 R1  
+ Inventor Geometry Interface 2026 R1 
+ JTOpen Geometry Interface 2026 R1   
+ NX Geometry Interface 2026 R1   
+ Parasolid Geometry Interface  2026 R1   
+ Solid Edge Geometry Interface 2026 R1   
+ SOLIDWORKS Geometry Interface 2026 R1   
+ Speos 2026 R1   
+ SpaceClaim 2026 R1  
+ Speos RPC 2026 R1   
+ Zemax OpticStudio 2026 R1   
+ Dynamic Reporting 2026 R1   
+ Aqwa 2026 R1
+ Autodyn 2026 R1 
+ Material Calibration App 2026 R1
+ Mechanical Products 2026 R1 
+ Motion 2026 R1  
+ Academic Student 2026 R1
+
+
+          *****  MAPDL COMMAND LINE ARGUMENTS  *****
+  BATCH MODE REQUESTED (-b)    = LIST
+  INPUT FILE COPY MODE (-c)    = COPY
+       1 PARALLEL PROCESSES REQUESTED WITH SINGLE THREAD PER PROCESS
+    TOTAL OF     1 CORES REQUESTED
+  INPUT FILE NAME              = d:\SIH\simulation\jobs\38ed7064\run_design.apdl
+  OUTPUT FILE NAME             = d:\SIH\simulation\jobs\38ed7064\ansys_design.out
+  MEMORY REQUESTED (MB)        = 1024        
+  INITIAL DIRECTORY = d:\SIH\simulation\jobs\38ed7064
+
+ RELEASE= 2026 R1              BUILD= 26.1      UP20260202   VERSION=WINDOWS x64 
+ CURRENT JOBNAME=file  11:52:11  AUG 26, 2026  Elapsed Time=       0.094
+
+     1  /BATCH  
+     2  *SET,SLEN,6.0   
+     3  *SET,SWID,4.0   
+     4  *SET,SHGT,2.8   
+     5  *SET,WTHK,0.35  
+     6  *SET,NWIN,0 
+     7  *SET,NDOOR,0
+     8  *SET,SHAPE,0
+     9  *SET,ROOFT,1
+    10  *SET,KWALL,0.52 
+    11  *SET,RHOWALL,1700   
+    12  *SET,CPWALL,879 
+    13  *SET,KROOF,0.52 
+    14  *SET,RHOROOF,1700   
+    15  *SET,CPROOF,879 
+    16  *SET,KFLOOR,0.85
+    17  *SET,RHOFLOOR,2000  
+    18  *SET,CPFLOOR,840
+    19  /INPUT,shelter_design,apdl  
+    20  *SET,T0,-18.00  
+    21  *SET,T_INSIDE_INIT,-18.00   
+    22  *SET,GNDTEMP,4.0
+    23  *SET,NHRS,24
+    24  *SET,T_AMB_H0,-18.00
+    25  *SET,Q_SOL_S_H0,0.00
+    26  *SET,Q_SOL_R_H0,0.00
+    27  *SET,H_EXT_H0,11.60 
+    28  *SET,T_AMB_H1,-18.50
+    29  *SET,Q_SOL_S_H1,0.00
+    30  *SET,Q_SOL_R_H1,0.00
+    31  *SET,H_EXT_H1,10.40 
+    32  *SET,T_AMB_H2,-19.00
+    33  *SET,Q_SOL_S_H2,0.00
+    34  *SET,Q_SOL_R_H2,0.00
+    35  *SET,H_EXT_H2,9.60  
+    36  *SET,T_AMB_H3,-19.20
+    37  *SET,Q_SOL_S_H3,0.00
+    38  *SET,Q_SOL_R_H3,0.00
+    39  *SET,H_EXT_H3,9.60  
+    40  *SET,T_AMB_H4,-19.00
+    41  *SET,Q_SOL_S_H4,0.00
+    42  *SET,Q_SOL_R_H4,0.00
+    43  *SET,H_EXT_H4,9.60  
+    44  *SET,T_AMB_H5,-18.50
+    45  *SET,Q_SOL_S_H5,0.00
+    46  *SET,Q_SOL_R_H5,0.00
+    47  *SET,H_EXT_H5,10.40 
+    48  *SET,T_AMB_H6,-17.50
+    49  *SET,Q_SOL_S_H6,0.00
+    50  *SET,Q_SOL_R_H6,0.00
+    51  *SET,H_EXT_H6,11.60 
+    52  *SET,T_AMB_H7,-15.00
+    53  *SET,Q_SOL_S_H7,0.00
+    54  *SET,Q_SOL_R_H7,0.00
+    55  *SET,H_EXT_H7,13.60 
+    56  *SET,T_AMB_H8,-12.00
+    57  *SET,Q_SOL_S_H8,149.52  
+    58  *SET,Q_SOL_R_H8,48.31   
+    59  *SET,H_EXT_H8,15.60 
+    60  *SET,T_AMB_H9,-8.00 
+    61  *SET,Q_SOL_S_H9,290.97  
+    62  *SET,Q_SOL_R_H9,148.12  
+    63  *SET,H_EXT_H9,17.60 
+    64  *SET,T_AMB_H10,-4.00
+    65  *SET,Q_SOL_S_H10,427.27 
+    66  *SET,Q_SOL_R_H10,262.99 
+    67  *SET,H_EXT_H10,19.60
+    68  *SET,T_AMB_H11,-1.00
+    69  *SET,Q_SOL_S_H11,507.66 
+    70  *SET,Q_SOL_R_H11,340.74 
+    71  *SET,H_EXT_H11,19.60
+    72  *SET,T_AMB_H12,1.50 
+    73  *SET,Q_SOL_S_H12,541.95 
+    74  *SET,Q_SOL_R_H12,373.17 
+    75  *SET,H_EXT_H12,17.60
+    76  *SET,T_AMB_H13,3.00 
+    77  *SET,Q_SOL_S_H13,518.94 
+    78  *SET,Q_SOL_R_H13,348.31 
+    79  *SET,H_EXT_H13,17.60
+    80  *SET,T_AMB_H14,3.50 
+    81  *SET,Q_SOL_S_H14,448.37 
+    82  *SET,Q_SOL_R_H14,275.98 
+    83  *SET,H_EXT_H14,15.60
+    84  *SET,T_AMB_H15,2.00 
+    85  *SET,Q_SOL_S_H15,319.13 
+    86  *SET,Q_SOL_R_H15,162.46 
+    87  *SET,H_EXT_H15,15.60
+    88  *SET,T_AMB_H16,-0.50
+    89  *SET,Q_SOL_S_H16,173.13 
+    90  *SET,Q_SOL_R_H16,55.93  
+    91  *SET,H_EXT_H16,13.60
+    92  *SET,T_AMB_H17,-3.50
+    93  *SET,Q_SOL_S_H17,0.00   
+    94  *SET,Q_SOL_R_H17,0.00   
+    95  *SET,H_EXT_H17,13.60
+    96  *SET,T_AMB_H18,-6.50
+    97  *SET,Q_SOL_S_H18,0.00   
+    98  *SET,Q_SOL_R_H18,0.00   
+    99  *SET,H_EXT_H18,12.80
+   100  *SET,T_AMB_H19,-9.00
+   101  *SET,Q_SOL_S_H19,0.00   
+   102  *SET,Q_SOL_R_H19,0.00   
+   103  *SET,H_EXT_H19,11.60
+   104  *SET,T_AMB_H20,-11.50   
+   105  *SET,Q_SOL_S_H20,0.00   
+   106  *SET,Q_SOL_R_H20,0.00   
+   107  *SET,H_EXT_H20,11.60
+   108  *SET,T_AMB_H21,-13.50   
+   109  *SET,Q_SOL_S_H21,0.00   
+   110  *SET,Q_SOL_R_H21,0.00   
+   111  *SET,H_EXT_H21,10.80
+   112  *SET,T_AMB_H22,-15.50   
+   113  *SET,Q_SOL_S_H22,0.00   
+   114  *SET,Q_SOL_R_H22,0.00   
+   115  *SET,H_EXT_H22,10.40
+   116  *SET,T_AMB_H23,-17.00   
+   117  *SET,Q_SOL_S_H23,0.00   
+   118  *SET,Q_SOL_R_H23,0.00   
+   119  *SET,H_EXT_H23,10.40
+   120  *SET,T_AMB_H24,-18.00   
+   121  *SET,Q_SOL_S_H24,0.00   
+   122  *SET,Q_SOL_R_H24,0.00   
+   123  *SET,H_EXT_H24,11.60
+   124  *DIM,TAMB_TB,TABLE,26,1,1,TIME  
+   125  *DIM,QSOLS_TB,TABLE,26,1,1,TIME 
+   126  *DIM,QSOLR_TB,TABLE,26,1,1,TIME 
+   127  *DIM,HEXT_TB,TABLE,26,1,1,TIME  
+   128  TAMB_TB(1,0,1)=0 $ TAMB_TB(1,1,1)=-18.00
+   129  QSOLS_TB(1,0,1)=0 $ QSOLS_TB(1,1,1)=0.00
+   130  QSOLR_TB(1,0,1)=0 $ QSOLR_TB(1,1,1)=0.00
+   131  HEXT_TB(1,0,1)=0 $ HEXT_TB(1,1,1)=11.60 
+   132  TAMB_TB(2,0,1)=3600 $ TAMB_TB(2,1,1)=-18.50 
+   133  QSOLS_TB(2,0,1)=3600 $ QSOLS_TB(2,1,1)=0.00 
+   134  QSOLR_TB(2,0,1)=3600 $ QSOLR_TB(2,1,1)=0.00 
+   135  HEXT_TB(2,0,1)=3600 $ HEXT_TB(2,1,1)=10.40  
+   136  TAMB_TB(3,0,1)=7200 $ TAMB_TB(3,1,1)=-19.00 
+   137  QSOLS_TB(3,0,1)=7200 $ QSOLS_TB(3,1,1)=0.00 
+   138  QSOLR_TB(3,0,1)=7200 $ QSOLR_TB(3,1,1)=0.00 
+   139  HEXT_TB(3,0,1)=7200 $ HEXT_TB(3,1,1)=9.60   
+   140  TAMB_TB(4,0,1)=10800 $ TAMB_TB(4,1,1)=-19.20
+   141  QSOLS_TB(4,0,1)=10800 $ QSOLS_TB(4,1,1)=0.00
+   142  QSOLR_TB(4,0,1)=10800 $ QSOLR_TB(4,1,1)=0.00
+   143  HEXT_TB(4,0,1)=10800 $ HEXT_TB(4,1,1)=9.60  
+   144  TAMB_TB(5,0,1)=14400 $ TAMB_TB(5,1,1)=-19.00
+   145  QSOLS_TB(5,0,1)=14400 $ QSOLS_TB(5,1,1)=0.00
+   146  QSOLR_TB(5,0,1)=14400 $ QSOLR_TB(5,1,1)=0.00
+   147  HEXT_TB(5,0,1)=14400 $ HEXT_TB(5,1,1)=9.60  
+   148  TAMB_TB(6,0,1)=18000 $ TAMB_TB(6,1,1)=-18.50
+   149  QSOLS_TB(6,0,1)=18000 $ QSOLS_TB(6,1,1)=0.00
+   150  QSOLR_TB(6,0,1)=18000 $ QSOLR_TB(6,1,1)=0.00
+   151  HEXT_TB(6,0,1)=18000 $ HEXT_TB(6,1,1)=10.40 
+   152  TAMB_TB(7,0,1)=21600 $ TAMB_TB(7,1,1)=-17.50
+   153  QSOLS_TB(7,0,1)=21600 $ QSOLS_TB(7,1,1)=0.00
+   154  QSOLR_TB(7,0,1)=21600 $ QSOLR_TB(7,1,1)=0.00
+   155  HEXT_TB(7,0,1)=21600 $ HEXT_TB(7,1,1)=11.60 
+   156  TAMB_TB(8,0,1)=25200 $ TAMB_TB(8,1,1)=-15.00
+   157  QSOLS_TB(8,0,1)=25200 $ QSOLS_TB(8,1,1)=0.00
+   158  QSOLR_TB(8,0,1)=25200 $ QSOLR_TB(8,1,1)=0.00
+   159  HEXT_TB(8,0,1)=25200 $ HEXT_TB(8,1,1)=13.60 
+   160  TAMB_TB(9,0,1)=28800 $ TAMB_TB(9,1,1)=-12.00
+   161  QSOLS_TB(9,0,1)=28800 $ QSOLS_TB(9,1,1)=149.52  
+   162  QSOLR_TB(9,0,1)=28800 $ QSOLR_TB(9,1,1)=48.31   
+   163  HEXT_TB(9,0,1)=28800 $ HEXT_TB(9,1,1)=15.60 
+   164  TAMB_TB(10,0,1)=32400 $ TAMB_TB(10,1,1)=-8.00   
+   165  QSOLS_TB(10,0,1)=32400 $ QSOLS_TB(10,1,1)=290.97
+   166  QSOLR_TB(10,0,1)=32400 $ QSOLR_TB(10,1,1)=148.12
+   167  HEXT_TB(10,0,1)=32400 $ HEXT_TB(10,1,1)=17.60   
+   168  TAMB_TB(11,0,1)=36000 $ TAMB_TB(11,1,1)=-4.00   
+   169  QSOLS_TB(11,0,1)=36000 $ QSOLS_TB(11,1,1)=427.27
+   170  QSOLR_TB(11,0,1)=36000 $ QSOLR_TB(11,1,1)=262.99
+   171  HEXT_TB(11,0,1)=36000 $ HEXT_TB(11,1,1)=19.60   
+   172  TAMB_TB(12,0,1)=39600 $ TAMB_TB(12,1,1)=-1.00   
+   173  QSOLS_TB(12,0,1)=39600 $ QSOLS_TB(12,1,1)=507.66
+   174  QSOLR_TB(12,0,1)=39600 $ QSOLR_TB(12,1,1)=340.74
+   175  HEXT_TB(12,0,1)=39600 $ HEXT_TB(12,1,1)=19.60   
+   176  TAMB_TB(13,0,1)=43200 $ TAMB_TB(13,1,1)=1.50
+   177  QSOLS_TB(13,0,1)=43200 $ QSOLS_TB(13,1,1)=541.95
+   178  QSOLR_TB(13,0,1)=43200 $ QSOLR_TB(13,1,1)=373.17
+   179  HEXT_TB(13,0,1)=43200 $ HEXT_TB(13,1,1)=17.60   
+   180  TAMB_TB(14,0,1)=46800 $ TAMB_TB(14,1,1)=3.00
+   181  QSOLS_TB(14,0,1)=46800 $ QSOLS_TB(14,1,1)=518.94
+   182  QSOLR_TB(14,0,1)=46800 $ QSOLR_TB(14,1,1)=348.31
+   183  HEXT_TB(14,0,1)=46800 $ HEXT_TB(14,1,1)=17.60   
+   184  TAMB_TB(15,0,1)=50400 $ TAMB_TB(15,1,1)=3.50
+   185  QSOLS_TB(15,0,1)=50400 $ QSOLS_TB(15,1,1)=448.37
+   186  QSOLR_TB(15,0,1)=50400 $ QSOLR_TB(15,1,1)=275.98
+   187  HEXT_TB(15,0,1)=50400 $ HEXT_TB(15,1,1)=15.60   
+   188  TAMB_TB(16,0,1)=54000 $ TAMB_TB(16,1,1)=2.00
+   189  QSOLS_TB(16,0,1)=54000 $ QSOLS_TB(16,1,1)=319.13
+   190  QSOLR_TB(16,0,1)=54000 $ QSOLR_TB(16,1,1)=162.46
+   191  HEXT_TB(16,0,1)=54000 $ HEXT_TB(16,1,1)=15.60   
+   192  TAMB_TB(17,0,1)=57600 $ TAMB_TB(17,1,1)=-0.50   
+   193  QSOLS_TB(17,0,1)=57600 $ QSOLS_TB(17,1,1)=173.13
+   194  QSOLR_TB(17,0,1)=57600 $ QSOLR_TB(17,1,1)=55.93 
+   195  HEXT_TB(17,0,1)=57600 $ HEXT_TB(17,1,1)=13.60   
+   196  TAMB_TB(18,0,1)=61200 $ TAMB_TB(18,1,1)=-3.50   
+   197  QSOLS_TB(18,0,1)=61200 $ QSOLS_TB(18,1,1)=0.00  
+   198  QSOLR_TB(18,0,1)=61200 $ QSOLR_TB(18,1,1)=0.00  
+   199  HEXT_TB(18,0,1)=61200 $ HEXT_TB(18,1,1)=13.60   
+   200  TAMB_TB(19,0,1)=64800 $ TAMB_TB(19,1,1)=-6.50   
+   201  QSOLS_TB(19,0,1)=64800 $ QSOLS_TB(19,1,1)=0.00  
+   202  QSOLR_TB(19,0,1)=64800 $ QSOLR_TB(19,1,1)=0.00  
+   203  HEXT_TB(19,0,1)=64800 $ HEXT_TB(19,1,1)=12.80   
+   204  TAMB_TB(20,0,1)=68400 $ TAMB_TB(20,1,1)=-9.00   
+   205  QSOLS_TB(20,0,1)=68400 $ QSOLS_TB(20,1,1)=0.00  
+   206  QSOLR_TB(20,0,1)=68400 $ QSOLR_TB(20,1,1)=0.00  
+   207  HEXT_TB(20,0,1)=68400 $ HEXT_TB(20,1,1)=11.60   
+   208  TAMB_TB(21,0,1)=72000 $ TAMB_TB(21,1,1)=-11.50  
+   209  QSOLS_TB(21,0,1)=72000 $ QSOLS_TB(21,1,1)=0.00  
+   210  QSOLR_TB(21,0,1)=72000 $ QSOLR_TB(21,1,1)=0.00  
+   211  HEXT_TB(21,0,1)=72000 $ HEXT_TB(21,1,1)=11.60   
+   212  TAMB_TB(22,0,1)=75600 $ TAMB_TB(22,1,1)=-13.50  
+   213  QSOLS_TB(22,0,1)=75600 $ QSOLS_TB(22,1,1)=0.00  
+   214  QSOLR_TB(22,0,1)=75600 $ QSOLR_TB(22,1,1)=0.00  
+   215  HEXT_TB(22,0,1)=75600 $ HEXT_TB(22,1,1)=10.80   
+   216  TAMB_TB(23,0,1)=79200 $ TAMB_TB(23,1,1)=-15.50  
+   217  QSOLS_TB(23,0,1)=79200 $ QSOLS_TB(23,1,1)=0.00  
+   218  QSOLR_TB(23,0,1)=79200 $ QSOLR_TB(23,1,1)=0.00  
+   219  HEXT_TB(23,0,1)=79200 $ HEXT_TB(23,1,1)=10.40   
+   220  TAMB_TB(24,0,1)=82800 $ TAMB_TB(24,1,1)=-17.00  
+   221  QSOLS_TB(24,0,1)=82800 $ QSOLS_TB(24,1,1)=0.00  
+   222  QSOLR_TB(24,0,1)=82800 $ QSOLR_TB(24,1,1)=0.00  
+   223  HEXT_TB(24,0,1)=82800 $ HEXT_TB(24,1,1)=10.40   
+   224  TAMB_TB(25,0,1)=86400 $ TAMB_TB(25,1,1)=-18.00  
+   225  QSOLS_TB(25,0,1)=86400 $ QSOLS_TB(25,1,1)=0.00  
+   226  QSOLR_TB(25,0,1)=86400 $ QSOLR_TB(25,1,1)=0.00  
+   227  HEXT_TB(25,0,1)=86400 $ HEXT_TB(25,1,1)=11.60   
+   228  /INPUT,shelter_thermal,apdl 
+
+ RUN SETUP PROCEDURE FROM FILE= D:\ANSYS Inc\ANSYS Student\v261\Ansys\apdl\start.ans
+
+ /INPUT FILE= D:\ANSYS Inc\ANSYS Student\v261\Ansys\apdl\start.ans  LINE=       0
+
+ PARAMETER SLEN =     6.000000000    
+
+ PARAMETER SWID =     4.000000000    
+
+ PARAMETER SHGT =     2.800000000    
+
+ PARAMETER WTHK =    0.3500000000    
+
+ PARAMETER NWIN =     0.000000000    
+
+ PARAMETER NDOOR =     0.000000000    
+
+ PARAMETER SHAPE =     0.000000000    
+
+ PARAMETER ROOFT =     1.000000000    
+
+ PARAMETER KWALL =    0.5200000000    
+
+ PARAMETER RHOWALL =     1700.000000    
+
+ PARAMETER CPWALL =     879.0000000    
+
+ PARAMETER KROOF =    0.5200000000    
+
+ PARAMETER RHOROOF =     1700.000000    
+
+ PARAMETER CPROOF =     879.0000000    
+
+ PARAMETER KFLOOR =    0.8500000000    
+
+ PARAMETER RHOFLOOR =     2000.000000    
+
+ PARAMETER CPFLOOR =     840.0000000    
+
+ /INPUT FILE= shelter_design.apdl  LINE=       0
+
+ TITLE= 
+  Ladakh Passive Shelter - Parametric 3D Model (Frontend Mirror)               
+
+
+ PARAMETER SLEN =     6.000000000    
+
+ PARAMETER SWID =     4.000000000    
+
+ PARAMETER SHGT =     3.000000000    
+
+ PARAMETER WTHK =    0.4500000000    
+
+ PARAMETER NWIN =     3.000000000    
+
+ PARAMETER NDOOR =     1.000000000    
+
+ PARAMETER SHAPE =     0.000000000    
+
+ PARAMETER ROOFT =     1.000000000    
+
+ PARAMETER KWALL =    0.7200000000    
+
+ PARAMETER RHOWALL =     1800.000000    
+
+ PARAMETER CPWALL =     840.0000000    
+
+ PARAMETER KROOF =    0.1500000000    
+
+ PARAMETER RHOROOF =     650.0000000    
+
+ PARAMETER CPROOF =     1200.000000    
+
+ PARAMETER KFLOOR =     1.800000000    
+
+ PARAMETER RHOFLOOR =     2400.000000    
+
+ PARAMETER CPFLOOR =     900.0000000    
+
+ *** MAPDL - ENGINEERING ANALYSIS SYSTEM  RELEASE 2026 R1          26.1     ***
+ Ansys Mechanical Enterprise Academic Student      
+ 01055371  VERSION=WINDOWS x64   11:52:12  AUG 26, 2026 Elapsed Time=      6.003
+
+  Ladakh Passive Shelter - Parametric 3D Model (Frontend Mirror)               
+
+
+
+          ***** MAPDL ANALYSIS DEFINITION (PREP7) *****
+
+ ELEMENT TYPE          1 IS SOLID70      3-D THERMAL SOLID           
+  KEYOPT( 1- 6)=        0      0      0        0      0      0
+  KEYOPT( 7-12)=        0      0      0        0      0      0
+  KEYOPT(13-18)=        0      0      0        0      0      0
+
+ CURRENT NODAL DOF SET IS  TEMP
+  THREE-DIMENSIONAL MODEL
+
+ MATERIAL          1     KXX  =  0.7200000      
+
+ MATERIAL          1     DENS =   1800.000      
+
+ MATERIAL          1     C    =   840.0000      
+
+ MATERIAL          2     KXX  =  0.1500000      
+
+ MATERIAL          2     DENS =   650.0000      
+
+ MATERIAL          2     C    =   1200.000      
+
+ MATERIAL          3     KXX  =   1.800000      
+
+ MATERIAL          3     DENS =   2400.000      
+
+ MATERIAL          3     C    =   900.0000      
+
+ MATERIAL          4     KXX  =   1.000000      
+
+ MATERIAL          4     DENS =   2500.000      
+
+ MATERIAL          4     C    =   750.0000      
+
+ MATERIAL          5     KXX  =  0.1500000      
+
+ MATERIAL          5     DENS =   650.0000      
+
+ MATERIAL          5     C    =   1200.000      
+
+ MATERIAL          6     KXX  =   1.800000      
+
+ MATERIAL          6     DENS =   2400.000      
+
+ MATERIAL          6     C    =   900.0000      
+
+ *IF  SHAPE  ( =   0.00000     )  EQ  
+      1  ( =   1.00000     )  THEN    
+
+ *ELSE
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         3
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM      0.000000000     TO      6.900000000    
+ Y-DISTANCES FROM      0.000000000     TO      4.900000000    
+ Z-DISTANCES FROM    -0.3000000000     TO      0.000000000    
+
+      OUTPUT VOLUME =     1
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         6
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM     0.4500000000     TO      6.450000000    
+ Y-DISTANCES FROM     0.4500000000     TO      4.450000000    
+ Z-DISTANCES FROM      0.000000000     TO     0.1500000000    
+
+      OUTPUT VOLUME =     2
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         1
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM     0.4500000000     TO      6.450000000    
+ Y-DISTANCES FROM      4.450000000     TO      4.900000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     3
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         1
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM      0.000000000     TO     0.4500000000    
+ Y-DISTANCES FROM      0.000000000     TO      4.900000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     4
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         1
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM      6.450000000     TO      6.900000000    
+ Y-DISTANCES FROM      0.000000000     TO      4.900000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     5
+
+ PARAMETER MARGIN =    0.4000000000    
+
+ PARAMETER TITEMS =     4.000000000    
+
+ PARAMETER DOOR_W =    0.9000000000    
+
+ PARAMETER DOOR_H =     2.100000000    
+
+ PARAMETER WIN_W =     1.200000000    
+
+ PARAMETER WIN_H =     1.200000000    
+
+ PARAMETER WIN_SILL =    0.8500000000    
+
+ PARAMETER WIN_TOP =     2.050000000    
+
+ PARAMETER CUR =    0.8500000000    
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         1
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM     0.4500000000     TO     0.8500000000    
+ Y-DISTANCES FROM      0.000000000     TO     0.4500000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+      OUTPUT VOLUME =     6
+
+ *IF  NDOOR  ( =   1.00000     )  GE  
+      1  ( =   1.00000     )  THEN    
+
+ PARAMETER DX1 =    0.8500000000    
+
+ PARAMETER DX2 =     1.750000000    
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         5
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM     0.8500000000     TO      1.750000000    
+ Y-DISTANCES FROM     0.1125000000     TO     0.3375000000    
+ Z-DISTANCES FROM      0.000000000     TO      2.100000000    
+
+      OUTPUT VOLUME =     7
+
+ PARAMETER CUR =     2.100000000    
+
+ *ENDIF
+
+ *IF  NDOOR  ( =   1.00000     )  GE  
+      2  ( =   2.00000     )  THEN    
+
+ *ENDIF
+
+ PARAMETER END_X =     6.050000000    
+
+ PARAMETER WIN_GAP =    0.3000000000    
+
+ *IF  NWIN  ( =   3.00000     )  GT  
+      0  ( =   0.00000     )  THEN    
+
+ PARAMETER WIN_GAP =    0.1166666667    
+
+ *IF  WIN_GAP  ( =  0.116667     )  LT  
+      0.2  ( =  0.200000     )  THEN    
+
+ PARAMETER WIN_GAP =    0.2000000000    
+
+ *ENDIF
+
+ *ENDIF
+
+ PARAMETER PREV_WIN_END =     2.100000000    
+
+ *IF  NWIN  ( =   3.00000     )  GE  
+      1  ( =   1.00000     )  THEN    
+
+ PARAMETER WX1 =     2.100000000    
+
+ PARAMETER WX2 =     3.300000000    
+
+ ELEMENT TYPE SET TO         1
+
+ MATERIAL NUMBER SET TO         1
+
+ CREATE A HEXAHEDRAL VOLUME WITH
+ X-DISTANCES FROM      2.100000000     TO      2.100000000    
+ Y-DISTANCES FROM      0.000000000     TO     0.4500000000    
+ Z-DISTANCES FROM      0.000000000     TO      3.000000000    
+
+
+ *** ERROR ***                           ELAPSED TIME =       6.017   TIME= 11:52:12
+ The x-distances are the same within the tolerance.                      
+  Can not create the hexahedral volume.                                  
+
+
+ NUMBER OF WARNING MESSAGES ENCOUNTERED=          0
+ NUMBER OF ERROR   MESSAGES ENCOUNTERED=          1
+
+
+
+ ***** PROBLEM TERMINATED BY INDICATED ERROR(S) OR BY END OF INPUT DATA *****

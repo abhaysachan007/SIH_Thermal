@@ -46,6 +46,9 @@ class ShelterInput(BaseModel):
     openings: List[Opening] = []
     orientation_deg: float = Field(ge=0, le=360, default=180.0)
     climate_profile_id: str = 'ladakh_winter'
+    min_ambient_temp_C: Optional[float] = Field(ge=-70.0, le=60.0, default=None, description="Custom Min Outside Ambient Temperature in °C")
+    max_ambient_temp_C: Optional[float] = Field(ge=-60.0, le=70.0, default=None, description="Custom Max Outside Ambient Temperature in °C")
+    peak_solar_radiation_W_m2: Optional[float] = Field(ge=0.0, le=2000.0, default=None, description="Custom Peak Solar Radiation in W/m²")
     duration_hours: int = Field(ge=1, le=72, default=24)
     variant_label: Optional[str] = None
     engine: Literal['auto', 'fdm', 'ansys'] = 'auto'
@@ -94,6 +97,18 @@ class ShelterInput(BaseModel):
                 data['orientation_deg'] = data['orientation']
             if data.get('orientation_deg') == 360:
                 data['orientation_deg'] = 0.0
+
+            # Climate & Temperature Range aliases
+            if 'min_ambient_temp' in data and 'min_ambient_temp_C' not in data:
+                data['min_ambient_temp_C'] = data['min_ambient_temp']
+            if 'max_ambient_temp' in data and 'max_ambient_temp_C' not in data:
+                data['max_ambient_temp_C'] = data['max_ambient_temp']
+            if 'solar_radiation' in data and 'peak_solar_radiation_W_m2' not in data:
+                data['peak_solar_radiation_W_m2'] = data['solar_radiation']
+            if 'peak_solar' in data and 'peak_solar_radiation_W_m2' not in data:
+                data['peak_solar_radiation_W_m2'] = data['peak_solar']
+            if 'peak_solar_radiation' in data and 'peak_solar_radiation_W_m2' not in data:
+                data['peak_solar_radiation_W_m2'] = data['peak_solar_radiation']
 
         return data
 

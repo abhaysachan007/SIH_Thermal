@@ -1,0 +1,107 @@
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       14:11:55
+
+ *** ERROR ***                           ELAPSED TIME =       5.678   TIME= 14:11:57
+ The x-distances are the same within the tolerance.                      
+  Can not create the hexahedral volume.                                  
+/COM,ANSYS RELEASE 2026 R1           BUILD 26.1      UP20260202       14:13:03
+
+ *** ERROR ***                           ELAPSED TIME =       5.615   TIME= 14:13:04
+ The x-distances are the same within the tolerance.                      
+  Can not create the hexahedral volume.                                  
+
+ *** WARNING ***                         ELAPSED TIME =       5.615   TIME= 14:13:04
+ WHILE PROCESSING FILE BASED INPUT (/INPUT OR MACRO) AN ERROR HAS        
+ OCCURRED.  SHOULD INPUT PROCESSING BE SUSPENDED?                        
+
+ *** WARNING ***                         ELAPSED TIME =       5.643   TIME= 14:13:04
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.644   TIME= 14:13:04
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.644   TIME= 14:13:04
+ Invalid color identifier specified in /COLOR command.                   
+
+ *** WARNING ***                         ELAPSED TIME =       5.644   TIME= 14:13:04
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.644   TIME= 14:13:04
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.644   TIME= 14:13:04
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.644   TIME= 14:13:04
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.645   TIME= 14:13:04
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.645   TIME= 14:13:04
+ Invalid color identifier specified in /COLOR command.                   
+
+ *** WARNING ***                         ELAPSED TIME =       5.645   TIME= 14:13:04
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.646   TIME= 14:13:04
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.646   TIME= 14:13:04
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =       5.646   TIME= 14:13:04
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =     644.056   TIME= 14:23:43
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =     644.117   TIME= 14:23:43
+ Invalid color identifier specified in /COLOR command.                   
+
+ *** WARNING ***                         ELAPSED TIME =     644.218   TIME= 14:23:43
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =     644.321   TIME= 14:23:43
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =     644.426   TIME= 14:23:43
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =     644.530   TIME= 14:23:43
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =     648.549   TIME= 14:23:47
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =     648.638   TIME= 14:23:47
+ Invalid color identifier specified in /COLOR command.                   
+
+ *** WARNING ***                         ELAPSED TIME =     648.735   TIME= 14:23:47
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =     648.832   TIME= 14:23:47
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =     648.931   TIME= 14:23:48
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =     649.029   TIME= 14:23:48
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** WARNING ***                         ELAPSED TIME =     675.848   TIME= 14:24:14
+ Unrecognized /COLOR parameter MAT.                                      
+
+ *** ERROR ***                           ELAPSED TIME =     797.032   TIME= 14:26:16
+ Present time 0 is less than or equal to the previous time 0 in a        
+ transient analysis.                                                     
+
+ *** ERROR ***                           ELAPSED TIME =     806.657   TIME= 14:26:25
+ The step data was checked and there were errors found.                  
+  Please check output or errors file (                                   
+ d:\SIH\simulation\jobs\13efa1cd\file.err ) for messages.                
+
+ *** WARNING ***                         ELAPSED TIME =     808.328   TIME= 14:26:27
+ The program chosen initial timestep/load-factor is arbitrary.  It is    
+ necessary for the user to supply a suitable initial                     
+ timestep/load-factor through the NSUB or DELTIM command for             
+ convergence and overall efficiency.                                     
