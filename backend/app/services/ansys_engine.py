@@ -183,7 +183,15 @@ def _numpy_extract_temps(mapdl, x_range=None, y_range=None, z_range=None):
     """
     mapdl.allsel()
     all_temps = mapdl.post_processing.nodal_temperature
+    if callable(all_temps):
+        # Some PyMAPDL versions expose nodal_temperature as a method rather
+        # than a property — calling it either way keeps this working across
+        # versions instead of failing with "object of type 'method' has no
+        # len()".
+        all_temps = all_temps()
     all_coords = mapdl.mesh.nodes
+    if callable(all_coords):
+        all_coords = all_coords()
 
     mask = np.ones(len(all_temps), dtype=bool)
     if x_range is not None:
