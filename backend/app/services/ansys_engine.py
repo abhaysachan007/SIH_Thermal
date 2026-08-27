@@ -574,9 +574,21 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
 
     # Define APDL tables for time-varying BCs
     # Table dimensions: 25 rows x 1 col, indexed by time
+    # Sol-air temperature method: instead of applying the absorbed solar flux
+    # as a raw HFLUX (which, combined with the way MAPDL nodal SF overwrites
+    # convection on the same face, left the sun-facing surface with no
+    # convective/radiative path to shed heat — it pinned at ~87 C), fold the
+    # solar gain into an elevated equivalent ambient temperature and drive the
+    # exterior faces with convection to THAT. This bounds the surface at the
+    # sol-air temperature (T_amb + absorbed_flux/h_ext), the standard building-
+    # physics result, so a sun-baked wall reaches a realistic ~30-45 C instead
+    # of running away. south_solar/roof_solar already include absorptivity.
+    tsol_south = [amb_temps[ih] + south_solar[ih] / max(1.0, h_ext_values[ih]) for ih in range(25)]
+    tsol_roof = [amb_temps[ih] + roof_solar[ih] / max(1.0, h_ext_values[ih]) for ih in range(25)]
+
     mapdl.run("*DIM,TAMB_TB,TABLE,25,1,1,TIME")
-    mapdl.run("*DIM,QSOLS_TB,TABLE,25,1,1,TIME")
-    mapdl.run("*DIM,QSOLR_TB,TABLE,25,1,1,TIME")
+    mapdl.run("*DIM,TSOLS_TB,TABLE,25,1,1,TIME")
+    mapdl.run("*DIM,TSOLR_TB,TABLE,25,1,1,TIME")
     mapdl.run("*DIM,HEXT_TB,TABLE,25,1,1,TIME")
     mapdl.run("*DIM,TINT_TB,TABLE,25,1,1,TIME")
 
@@ -585,10 +597,10 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
         t_sec = ih * 3600
         mapdl.run(f"TAMB_TB({row},0,1)={t_sec}")
         mapdl.run(f"TAMB_TB({row},1,1)={amb_temps[ih]:.2f}")
-        mapdl.run(f"QSOLS_TB({row},0,1)={t_sec}")
-        mapdl.run(f"QSOLS_TB({row},1,1)={south_solar[ih]:.2f}")
-        mapdl.run(f"QSOLR_TB({row},0,1)={t_sec}")
-        mapdl.run(f"QSOLR_TB({row},1,1)={roof_solar[ih]:.2f}")
+        mapdl.run(f"TSOLS_TB({row},0,1)={t_sec}")
+        mapdl.run(f"TSOLS_TB({row},1,1)={tsol_south[ih]:.2f}")
+        mapdl.run(f"TSOLR_TB({row},0,1)={t_sec}")
+        mapdl.run(f"TSOLR_TB({row},1,1)={tsol_roof[ih]:.2f}")
         mapdl.run(f"HEXT_TB({row},0,1)={t_sec}")
         mapdl.run(f"HEXT_TB({row},1,1)={h_ext_values[ih]:.2f}")
         mapdl.run(f"TINT_TB({row},0,1)={t_sec}")
@@ -610,26 +622,19 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
         # CSYS,2 is MAPDL's spherical system, where LOC,X is the radius — so
         # radius bands select the inner/outer shells unambiguously.
 
-        # Exterior: outer shell + entrance tunnel outer + foundation underside
+        # Foundation underside + tunnel outer: plain-ambient convection
         mapdl.csys(2)
-        mapdl.nsel("S", "LOC", "X", dome_r - 0.03, dome_r + 0.6)
+        mapdl.nsel("S", "LOC", "X", dome_r + 0.03, dome_r + 0.6)   # tunnel outer only
         mapdl.csys(0)
-        mapdl.nsel("A", "LOC", "Z", -0.13, -0.11)   # foundation bottom
-        mapdl.cm("EXT_NODES", "NODE")
-        mapdl.sf("EXT_NODES", "CONV", "%HEXT_TB%", "%TAMB_TB%")
+        mapdl.nsel("A", "LOC", "Z", -0.13, -0.11)                 # foundation bottom
+        mapdl.sf("ALL", "CONV", "%HEXT_TB%", "%TAMB_TB%")
 
-        # Solar flux on the outer dome shell (acts as the roof of an igloo)
+        # Outer dome shell: sol-air convection (solar gain folded into the
+        # equivalent ambient temperature — bounds the surface, no runaway).
         mapdl.csys(2)
         mapdl.nsel("S", "LOC", "X", dome_r - 0.03, dome_r + 0.03)
         mapdl.csys(0)
-        mapdl.sf("ALL", "HFLUX", "%QSOLR_TB%")
-
-        # Extra south-facing solar on the lower dome band (y < 0 = south)
-        mapdl.csys(2)
-        mapdl.nsel("S", "LOC", "X", dome_r - 0.03, dome_r + 0.03)
-        mapdl.csys(0)
-        mapdl.nsel("R", "LOC", "Y", -(dome_r + 1.0), 0.0)
-        mapdl.sf("ALL", "HFLUX", "%QSOLS_TB%")
+        mapdl.sf("ALL", "CONV", "%HEXT_TB%", "%TSOLR_TB%")
 
         # Ground BC at the foundation underside
         mapdl.csys(0)
@@ -651,25 +656,22 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
         slope_top = H + PITCH_H * 0.55 + 0.15   # top of the two gable slopes
         ridge_top = H + PITCH_H + 0.15          # top of the ridge cap
 
-        # Exterior surface selection + convection BC
+        # Non-solar exterior faces: plain-ambient convection
+        # (foundation bottom, east/west/north outer walls).
         mapdl.nsel("S", "LOC", "Z", -0.31, -0.29)       # Foundation bottom
         mapdl.nsel("A", "LOC", "X", -0.01, 0.01)        # West outer
         mapdl.nsel("A", "LOC", "X", L + 2*wthk - 0.01, L + 2*wthk + 0.01)  # East outer
-        mapdl.nsel("A", "LOC", "Z", slope_top - 0.02, slope_top + 0.05)    # Roof slope tops
-        mapdl.nsel("A", "LOC", "Z", ridge_top - 0.02, ridge_top + 0.05)    # Ridge cap top
-        mapdl.nsel("A", "LOC", "Y", -0.01, 0.01)        # South outer
         mapdl.nsel("A", "LOC", "Y", W + 2*wthk - 0.01, W + 2*wthk + 0.01)  # North outer
-        mapdl.cm("EXT_NODES", "NODE")
-        mapdl.sf("EXT_NODES", "CONV", "%HEXT_TB%", "%TAMB_TB%")
+        mapdl.sf("ALL", "CONV", "%HEXT_TB%", "%TAMB_TB%")
 
-        # Solar flux on south wall exterior (Y = 0 face)
+        # South wall exterior: sol-air convection (solar folded into ambient)
         mapdl.nsel("S", "LOC", "Y", -0.01, 0.01)
-        mapdl.sf("ALL", "HFLUX", "%QSOLS_TB%")
+        mapdl.sf("ALL", "CONV", "%HEXT_TB%", "%TSOLS_TB%")
 
-        # Solar flux on roof (both slope tops and the ridge cap)
+        # Roof (slopes + ridge cap): sol-air convection
         mapdl.nsel("S", "LOC", "Z", slope_top - 0.02, slope_top + 0.05)
         mapdl.nsel("A", "LOC", "Z", ridge_top - 0.02, ridge_top + 0.05)
-        mapdl.sf("ALL", "HFLUX", "%QSOLR_TB%")
+        mapdl.sf("ALL", "CONV", "%HEXT_TB%", "%TSOLR_TB%")
 
         # Ground BC: fixed deep-ground temperature at the foundation underside
         mapdl.nsel("S", "LOC", "Z", -0.32, -0.28)
