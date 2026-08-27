@@ -488,13 +488,25 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
 
     # Get geometry metrics from MAPDL parameters
     total_nodes = int(mapdl.get("TOTAL_NODES", "NODE", "", "COUNT"))
+    total_elems = int(mapdl.get("TOTAL_ELEM", "ELEM", "", "COUNT"))
+    if total_nodes == 0 or total_elems == 0:
+        # The geometry/mesh step produced nothing (e.g. the dome SPHERE/CYLIND
+        # volumes failed to build or mesh under this MAPDL build). Every
+        # downstream BC/solve would then fail with the opaque "no elements
+        # defined — SF ignored" error. Fail clearly instead so the caller
+        # falls back to FDM with an honest reason.
+        raise RuntimeError(
+            f"Geometry meshing produced no elements (nodes={total_nodes}, "
+            f"elements={total_elems}) for shape='{shape}'. The APDL geometry "
+            "step did not build a solvable mesh."
+        )
     wall_area = 2 * (L + W) * H
     south_wall_area = W * H
     roof_area = L * W
     floor_area = L * W
     interior_volume = L * W * H
 
-    logger.info(f"PyMAPDL geometry built: {total_nodes} nodes, wall_area={wall_area:.1f} m2")
+    logger.info(f"PyMAPDL geometry built: {total_nodes} nodes, {total_elems} elements, wall_area={wall_area:.1f} m2")
 
     # -- Compute 24h climate boundary conditions --
     from app.services.simulation_service import scale_climate_profile

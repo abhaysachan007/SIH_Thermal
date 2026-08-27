@@ -214,9 +214,14 @@ export default function Shelter3DViewer({
     const westWallColor  = thermalMode ? getThermalColor(dotWest, surfTemps?.west_wall_inner_C)  : baseArchWallColor;
 
     const roofColor   = thermalMode ? getThermalColor(dotSouth > 0.3 ? 0.7 : 0.2, surfTemps?.roof_inner_C) : 0x8b4513;
-    const plinthColor = thermalMode ? 0x1d4ed8 : 0x475569;
-    const glassColor  = thermalMode ? (dotSouth > 0.4 ? 0xef4444 : 0x38bdf8) : 0x60a5fa;
-    const doorColor   = thermalMode ? 0xd97706 : 0x5c3a21;
+    const plinthColor = thermalMode ? getThermalColorFromTemp(surfTemps?.floor_surface_C ?? minInsideTemp) : 0x475569;
+    // In FLIR mode, openings read the temperature of the wall they sit in —
+    // never a fixed warm hue, which would falsely paint them as hot spots.
+    const glassColor  = thermalMode ? getThermalColorFromTemp(surfTemps?.south_wall_inner_C ?? avgTemp) : 0x60a5fa;
+    const doorColor   = thermalMode ? getThermalColorFromTemp(surfTemps?.south_wall_inner_C ?? avgTemp) : 0x5c3a21;
+    // Roof-level decorative elements (ridge, chimney, parapet) share the roof
+    // temperature in FLIR mode so they don't dominate the view as false hot spots.
+    const roofTrimThermal = getThermalColorFromTemp(surfTemps?.roof_inner_C ?? minInsideTemp);
 
     const sWallMat = new THREE.MeshStandardMaterial({ color: southWallColor, roughness: 0.85, wireframe });
     const nWallMat = new THREE.MeshStandardMaterial({ color: northWallColor, roughness: 0.85, wireframe });
@@ -224,7 +229,7 @@ export default function Shelter3DViewer({
     const wWallMat = new THREE.MeshStandardMaterial({ color: westWallColor, roughness: 0.85, wireframe });
     const roofMat  = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.65, wireframe });
     const plinthMat = new THREE.MeshStandardMaterial({ color: plinthColor, roughness: 0.9, wireframe });
-    const floorMat = new THREE.MeshStandardMaterial({ color: thermalMode ? 0x10b981 : 0x6e5238, roughness: 0.9, wireframe });
+    const floorMat = new THREE.MeshStandardMaterial({ color: thermalMode ? getThermalColorFromTemp(surfTemps?.floor_surface_C ?? minInsideTemp) : 0x6e5238, roughness: 0.9, wireframe });
 
     const glassMat = new THREE.MeshPhysicalMaterial({
       color: glassColor,
@@ -603,7 +608,7 @@ export default function Shelter3DViewer({
 
         // Roof Ridge Cap (Apex)
         const ridgeGeo = new THREE.BoxGeometry(totalL + 0.1, 0.15, 0.2);
-        const ridgeMat = new THREE.MeshStandardMaterial({ color: thermalMode ? 0xf97316 : 0x5c3d1e, roughness: 0.5 });
+        const ridgeMat = new THREE.MeshStandardMaterial({ color: thermalMode ? roofTrimThermal : 0x5c3d1e, roughness: 0.5 });
         const ridgeMesh = new THREE.Mesh(ridgeGeo, ridgeMat);
         ridgeMesh.position.set(0, height_m + pitchHeight + 0.05, 0);
         shelterGroup.add(ridgeMesh);
@@ -631,7 +636,7 @@ export default function Shelter3DViewer({
 
         // Chimney / Flue Vent (Classic Alpine House Feature)
         const chimGeo = new THREE.BoxGeometry(0.5, 1.2, 0.5);
-        const chimMat = new THREE.MeshStandardMaterial({ color: thermalMode ? 0xef4444 : 0x78350f });
+        const chimMat = new THREE.MeshStandardMaterial({ color: thermalMode ? roofTrimThermal : 0x78350f });
         const chimMesh = new THREE.Mesh(chimGeo, chimMat);
         chimMesh.position.set(-cx + 1.2, height_m + pitchHeight * 0.8, -cz * 0.3);
         shelterGroup.add(chimMesh);
@@ -646,7 +651,7 @@ export default function Shelter3DViewer({
         shelterGroup.add(roofMesh);
 
         const parapetGeo = new THREE.BoxGeometry(length + wallThk * 2 + 0.7, 0.12, width + wallThk * 2 + 0.7);
-        const parapetMat = new THREE.MeshStandardMaterial({ color: thermalMode ? 0xf97316 : 0x5c3d1e, roughness: 0.6 });
+        const parapetMat = new THREE.MeshStandardMaterial({ color: thermalMode ? roofTrimThermal : 0x5c3d1e, roughness: 0.6 });
         const parapetMesh = new THREE.Mesh(parapetGeo, parapetMat);
         parapetMesh.position.set(0, height_m + 0.25 + 0.06, 0);
         shelterGroup.add(parapetMesh);
