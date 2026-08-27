@@ -11,6 +11,7 @@ Generates:
 import os
 import json
 import shutil
+import tempfile
 import logging
 import subprocess
 from pathlib import Path
@@ -21,9 +22,11 @@ from app.pipeline.climate_repo import ClimateTimeSeries
 
 logger = logging.getLogger(__name__)
 
-JOBS_BASE_DIR = Path(
-    os.environ.get("ANSYS_PIPELINE_JOBS_DIR", "simulation/pipeline_jobs")
-)
+# Outside the project tree so it never triggers a uvicorn --reload restart
+# mid-run (see ansys_engine.JOBS_DIR for the full rationale).
+JOBS_BASE_DIR = Path(os.environ.get(
+    "ANSYS_PIPELINE_JOBS_DIR", str(Path(tempfile.gettempdir()) / "therma_ladakh_pipeline_jobs")
+))
 
 
 def build_ansys_contract_payload(

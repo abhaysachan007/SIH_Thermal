@@ -955,7 +955,19 @@ export default function InputPage() {
       }
     } catch (err) {
       setLoading(false);
-      if (!cancelled) alert(`Simulation error: ${err.message}`);
+      if (!cancelled) {
+        // Surface the backend's real reason (FastAPI 422 validation detail /
+        // 400 message) instead of a cryptic "Request failed with status 422",
+        // which otherwise looks like the app terminated on its own.
+        const detail = err?.response?.data?.detail;
+        let msg = err?.message || 'Unknown error';
+        if (Array.isArray(detail)) {
+          msg = detail.map((d) => `${(d.loc || []).slice(1).join('.')}: ${d.msg}`).join('\n');
+        } else if (typeof detail === 'string') {
+          msg = detail;
+        }
+        alert(`Simulation could not start:\n\n${msg}\n\nApne dimensions/inputs check karein aur dobara try karein.`);
+      }
     } finally {
       setLoading(false);
     }

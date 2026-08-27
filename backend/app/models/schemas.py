@@ -31,9 +31,11 @@ class Opening(BaseModel):
 
 
 class ShelterInput(BaseModel):
-    length_m: float = Field(gt=1, le=50, default=6.0)
-    width_m: float = Field(gt=1, le=50, default=4.0)
-    height_m: float = Field(gt=1, le=10, default=3.0)
+    length_m: float = Field(gt=1, le=60, default=6.0)
+    width_m: float = Field(gt=1, le=60, default=4.0)
+    # Interior clearance; raised from 10 so tall forms (A-frame apex, large
+    # halls) don't trip a 422 validation error on submit.
+    height_m: float = Field(gt=1, le=25, default=3.0)
     shape: Literal['rectangular', 'dome', 'aframe'] = 'rectangular'
     # aframe = steep A-frame snow-shedding cabin; thermally solved through the
     # rectangular envelope path, rendered as its own form in the 3D viewer.

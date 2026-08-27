@@ -13,6 +13,7 @@ ANSYS executable path is config-driven via MAPDL_EXEC_PATH env var.
 import math
 import os
 import shutil
+import tempfile
 import logging
 import uuid
 import numpy as np
@@ -21,7 +22,14 @@ from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-JOBS_DIR = Path(os.environ.get("ANSYS_JOBS_DIR", "simulation/jobs"))
+# Write ANSYS scratch/job files to a temp dir OUTSIDE the project tree by
+# default. If they land inside the repo (the old "simulation/jobs" default),
+# `uvicorn --reload` sees the new files, restarts the server mid-solve, and
+# drops the in-memory job + any live-fetched climate — which surfaced to the
+# user as the app "terminating on its own" partway through a run.
+JOBS_DIR = Path(os.environ.get(
+    "ANSYS_JOBS_DIR", str(Path(tempfile.gettempdir()) / "therma_ladakh_jobs")
+))
 
 # ANSYS versions to probe, newest first (v261 = 2026 R1, v252 = 2025 R2, ...)
 _ANSYS_VERSIONS = ["261", "252", "251", "242", "241", "232", "231", "222", "221"]
