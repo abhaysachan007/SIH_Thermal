@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 import TemperatureChart from '../components/TemperatureChart';
 import SolarGainChart from '../components/SolarGainChart';
@@ -155,51 +154,133 @@ export default function ResultsPage() {
   const climateName = input?.climate_profile_id || 'Ladakh Winter';
 
   const handleExportPDF = async () => {
+    // Text/table-based report generated directly from the result data.
+    // The previous implementation rasterized DOM nodes with html2canvas,
+    // which (a) only saw the one tab currently mounted (the others are
+    // conditionally rendered, so their refs were null and silently skipped)
+    // and (b) throws on Tailwind v4's oklch() colors, with the error
+    // swallowed by the catch — so nothing downloaded. Building the PDF from
+    // data avoids the DOM entirely and always produces a full report.
     setIsExporting(true);
     try {
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageW = pdf.internal.pageSize.getWidth();
-      let y = 15;
+      const marginX = 14;
+      let y = 18;
 
-      pdf.setFontSize(16);
+      const fmt = (v, digits = 1, unit = '') =>
+        (v == null || Number.isNaN(v)) ? '—' : `${Number(v).toFixed(digits)}${unit}`;
+
+      const ensureSpace = (needed) => {
+        if (y + needed > 285) { pdf.addPage(); y = 18; }
+      };
+
+      const sectionHeader = (text) => {
+        ensureSpace(12);
+        pdf.setFontSize(12);
+        pdf.setTextColor(2, 132, 199);
+        pdf.text(text, marginX, y);
+        y += 2;
+        pdf.setDrawColor(203, 213, 225);
+        pdf.line(marginX, y, pageW - marginX, y);
+        y += 6;
+      };
+
+      const row = (label, value) => {
+        ensureSpace(7);
+        pdf.setFontSize(10);
+        pdf.setTextColor(71, 85, 105);
+        pdf.text(String(label), marginX, y);
+        pdf.setTextColor(15, 23, 42);
+        pdf.text(String(value), pageW - marginX, y, { align: 'right' });
+        y += 6;
+      };
+
+      // Title block
+      pdf.setFontSize(17);
       pdf.setTextColor(15, 23, 42);
-      pdf.text('THERMA·LADAKH — Numerical Simulation Report', pageW / 2, y, { align: 'center' });
-      y += 7;
-
+      pdf.text('THERMA-LADAKH — Thermal Simulation Report', pageW / 2, y, { align: 'center' });
+      y += 8;
       pdf.setFontSize(9);
       pdf.setTextColor(100, 116, 139);
-      pdf.text(`Climate: ${climateName}  |  Azimuth: ${dirLabel}  |  Duration: ${input?.duration_hours || 24}h`, pageW / 2, y, { align: 'center' });
+      pdf.text(`Climate: ${climateName}   |   Azimuth: ${dirLabel}   |   Duration: ${input?.duration_hours || 24}h`, pageW / 2, y, { align: 'center' });
       y += 5;
       pdf.text(`Generated: ${new Date().toLocaleString()}`, pageW / 2, y, { align: 'center' });
-      y += 10;
+      y += 12;
 
-      const refEntries = [
-        ['Transient Temperature Dynamics', chartRefs.temperature],
-        ['Direct Solar Irradiation Capture', chartRefs.solar],
-        ['Component Heat Flow Analysis', chartRefs.heatflow],
-      ];
-      if (isCompare) refEntries.push(['Comparative Variant Matrix', chartRefs.comparison]);
-      refEntries.push(['Engineering Recommendation Brief', chartRefs.recommendation]);
+      const engineLabel = (result?.engine_used || compareList?.[0]?.engine_used || 'python_fdm')
+        .includes('ansys') ? 'ANSYS MAPDL SOLID70 Transient FEA' : 'Python FDM (1D transient)';
 
-      for (const [title, ref] of refEntries) {
-        if (!ref.current) continue;
-        const canvas = await html2canvas(ref.current, { scale: 1.5, useCORS: true });
-        const imgData = canvas.toDataURL('image/png');
-        const imgW = pageW - 20;
-        const imgH = (canvas.height / canvas.width) * imgW;
+      // Design configuration
+      sectionHeader('Design Configuration');
+      row('Solver engine', engineLabel);
+      row('Dimensions (L x W x H)', `${input?.length_m ?? '—'} x ${input?.width_m ?? '—'} x ${input?.height_m ?? '—'} m`);
+      row('Wall material', input?.wall_material_id ?? '—');
+      row('Wall thickness', fmt(input?.wall_thickness_m, 2, ' m'));
+      row('Roof material', input?.roof_material_id ?? '—');
+      row('Floor material', input?.floor_material_id ?? '—');
+      row('Orientation', dirLabel);
+      row('Outside ambient range', `${fmt(activePrimary.minAmb)}°C to ${fmt(activePrimary.maxAmb)}°C`);
+      y += 4;
 
-        if (y + imgH + 15 > 280) { pdf.addPage(); y = 15; }
-        pdf.setFontSize(11);
-        pdf.setTextColor(2, 132, 199);
-        pdf.text(title, 10, y);
+      // Thermal performance
+      sectionHeader('Thermal Performance');
+      row('Min interior temperature', fmt(activePrimary.minTemp, 1, ' °C'));
+      row('Peak interior temperature', fmt(activePrimary.peakTemp, 1, ' °C'));
+      row('Average interior temperature', fmt(activePrimary.avgTemp, 1, ' °C'));
+      row('Max thermal lift (interior vs outside)', fmt(activePrimary.maxDiff, 1, ' °C'));
+      row('Average thermal lift', fmt(activePrimary.avgDiff, 1, ' °C'));
+      row('Interior diurnal swing', fmt(activePrimary.insideDrop, 1, ' °C'));
+      row('Thermal damping ratio', fmt(activePrimary.dampingRatio, 0, ' %'));
+      row('Comfort hours (>= 12°C)', activePrimary.comfortHours ?? '—');
+      row('Efficiency index', `${activePrimary.efficiencyScore ?? '—'} / 100`);
+      y += 4;
+
+      // Energy balance
+      sectionHeader('Energy Balance');
+      row('Total useful solar gain', fmt(activePrimary.totalKwh, 2, ' kWh'));
+      row('Total envelope heat loss', fmt(activePrimary.totalLossKwh, 2, ' kWh'));
+      y += 4;
+
+      // ANSYS FEA telemetry, when present
+      if (result?.ansys_fea_details) {
+        sectionHeader('ANSYS FEA Solver Telemetry');
+        row('Solver formulation', result.ansys_fea_details.solver || 'MAPDL SOLID70 Transient');
+        row('Mesh nodes', result.ansys_fea_details.total_nodes?.toLocaleString?.() ?? result.ansys_fea_details.total_nodes ?? '—');
+        row('Peak nodal temperature', fmt(result.ansys_fea_details.peak_temp_any_C, 1, ' °C'));
+        row('Min nodal temperature', fmt(result.ansys_fea_details.min_temp_any_C, 1, ' °C'));
         y += 4;
-        pdf.addImage(imgData, 'PNG', 10, y, imgW, imgH);
-        y += imgH + 8;
       }
+
+      // Surface temperatures, when present
+      const st = result?.surface_temperatures;
+      if (st) {
+        sectionHeader('Per-Surface Inner Temperatures');
+        const surfaceRows = [
+          ['South wall', st.south_wall_inner_C], ['North wall', st.north_wall_inner_C],
+          ['East wall', st.east_wall_inner_C], ['West wall', st.west_wall_inner_C],
+          ['Roof underside', st.roof_inner_C], ['Floor surface', st.floor_surface_C],
+        ];
+        surfaceRows.forEach(([label, v]) => { if (v != null) row(label, fmt(v, 1, ' °C')); });
+        y += 4;
+      }
+
+      // Recommendation
+      sectionHeader('Engineering Recommendation');
+      pdf.setFontSize(10);
+      pdf.setTextColor(30, 41, 59);
+      const recLines = pdf.splitTextToSize(recText, pageW - 2 * marginX);
+      recLines.forEach((line) => { ensureSpace(6); pdf.text(line, marginX, y); y += 5; });
+      y += 2;
+      recReasons.forEach((r) => {
+        const bulletLines = pdf.splitTextToSize(`•  ${r}`, pageW - 2 * marginX);
+        bulletLines.forEach((line) => { ensureSpace(6); pdf.text(line, marginX, y); y += 5; });
+      });
 
       pdf.save('THERMA_LADAKH_Simulation_Report.pdf');
     } catch (e) {
       console.error('PDF export failed:', e);
+      alert(`PDF export failed: ${e?.message || e}`);
     } finally {
       setIsExporting(false);
     }

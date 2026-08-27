@@ -121,9 +121,17 @@ export default function Shelter3DViewer({
     const activeAzimuth = sunAngle ?? orientationDeg ?? 180;
     const sunRad = (activeAzimuth - 90) * (Math.PI / 180);
     const sunDist = Math.max(length, width, height_m) * 2.2;
-    const sunX = Math.cos(sunRad) * sunDist;
-    const sunZ = Math.sin(sunRad) * sunDist;
-    const sunY = Math.max(height_m * 1.6, sunDist * 0.7);
+    // Low winter-sun altitude for Ladakh (~34°N): at the winter solstice the
+    // noon sun sits only ~32° above the horizon, so its rays strike the south
+    // wall at a shallow angle and reach deep inside through south windows —
+    // the core of passive solar heating. Place the sun at that altitude
+    // (horizontal distance * tan(altitude)) instead of nearly overhead, so the
+    // solar ray visibly enters the house at an angle.
+    const SUN_ALTITUDE_DEG = 30;
+    const horizDist = sunDist;
+    const sunX = Math.cos(sunRad) * horizDist;
+    const sunZ = Math.sin(sunRad) * horizDist;
+    const sunY = Math.max(height_m * 0.9, horizDist * Math.tan(SUN_ALTITUDE_DEG * Math.PI / 180));
 
     const ambientLight = new THREE.AmbientLight(0xffffff, thermalMode ? 0.75 : 0.85);
     scene.add(ambientLight);
@@ -661,13 +669,22 @@ export default function Shelter3DViewer({
       glowMesh.position.set(sunX, sunY, sunZ);
       scene.add(glowMesh);
 
-      // Solar Incident Vector Arrow pointing directly into the shelter center
-      const targetPoint = new THREE.Vector3(0, height_m * 0.5, 0);
+      // Solar Incident Vector Arrow — aimed at the south wall's window band
+      // (not the geometric centre), so the low-angle ray reads as sunlight
+      // entering the house through the south glazing.
+      const targetPoint = new THREE.Vector3(0, height_m * 0.45, -(width / 2));
       const dir = new THREE.Vector3().subVectors(targetPoint, new THREE.Vector3(sunX, sunY, sunZ)).normalize();
-      const arrowLength = sunDist * 0.85;
+      const arrowLength = sunDist * 0.9;
       const arrowHelper = new THREE.ArrowHelper(dir, new THREE.Vector3(sunX, sunY, sunZ), arrowLength, 0xf59e0b, 0.8, 0.4);
       scene.add(arrowHelper);
     }
+
+    // --- XYZ Axis Gizmo (house reference axes) ---
+    // X = length (red), Y = height/up (green), Z = width (blue).
+    const axisLen = Math.max(length, width, height_m) * 0.6;
+    const axesHelper = new THREE.AxesHelper(axisLen);
+    axesHelper.position.set(-(length / 2) - 0.6, 0, -(width / 2) - 0.6);
+    scene.add(axesHelper);
 
     scene.add(shelterGroup);
 
