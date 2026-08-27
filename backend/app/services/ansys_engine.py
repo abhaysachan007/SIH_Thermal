@@ -581,6 +581,34 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
         fdm_inside = amb_temps[:24]
     int_air_temps = [fdm_inside[ih % len(fdm_inside)] for ih in range(25)]
 
+    # -- Direct-gain solar onto the floor (passive-solar core mechanism) --
+    # Sunlight transmitted through the south glazing lands on and heats the
+    # floor slab — this is exactly the "sun trapped on the floor" the FLIR
+    # view should show warm. The envelope BCs above only heat exterior faces,
+    # so without this the floor reads cold. Transmitted flux onto the floor =
+    # (transposed beam on south / wall_abs) * glazing SHGC * glazing_area,
+    # spread over the floor area, folded into a floor sol-air temperature.
+    glazing_area = 0.0
+    for op in (getattr(inputs, "openings", []) or []):
+        is_win = (op.get("type") if isinstance(op, dict) else getattr(op, "type", "")) == "window"
+        if not is_win:
+            continue
+        ow = float(op.get("width_m", 1.0) if isinstance(op, dict) else getattr(op, "width_m", 1.0))
+        oh = float(op.get("height_m", 1.2) if isinstance(op, dict) else getattr(op, "height_m", 1.2))
+        oc = int(op.get("count", 1) if isinstance(op, dict) else getattr(op, "count", 1))
+        glazing_area += ow * oh * oc
+    if glazing_area <= 0:
+        glazing_area = 0.15 * (W * H)   # default ~15% of south wall glazed
+    SHGC = 0.6
+    h_int = 6.0
+    floor_area_bc = max(1.0, L * W)
+    tsol_floor = []
+    for ih in range(25):
+        transposed_beam = south_solar[ih] / max(0.1, wall_abs)     # undo wall absorptivity
+        transmitted_W = transposed_beam * SHGC * glazing_area       # watts into the room
+        floor_flux = transmitted_W / floor_area_bc                  # W/m^2 on the floor
+        tsol_floor.append(int_air_temps[ih] + floor_flux / h_int)
+
     # -- Apply thermal boundary conditions via APDL commands --
     mapdl.prep7()
 
@@ -603,6 +631,7 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
     mapdl.run("*DIM,TSOLR_TB,TABLE,25,1,1,TIME")
     mapdl.run("*DIM,HEXT_TB,TABLE,25,1,1,TIME")
     mapdl.run("*DIM,TINT_TB,TABLE,25,1,1,TIME")
+    mapdl.run("*DIM,TSOLF_TB,TABLE,25,1,1,TIME")
 
     for ih in range(25):
         row = ih + 1
@@ -617,6 +646,8 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
         mapdl.run(f"HEXT_TB({row},1,1)={h_ext_values[ih]:.2f}")
         mapdl.run(f"TINT_TB({row},0,1)={t_sec}")
         mapdl.run(f"TINT_TB({row},1,1)={int_air_temps[ih]:.2f}")
+        mapdl.run(f"TSOLF_TB({row},0,1)={t_sec}")
+        mapdl.run(f"TSOLF_TB({row},1,1)={tsol_floor[ih]:.2f}")
 
     T0 = amb_temps[0]
 
@@ -696,6 +727,15 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
         mapdl.nsel("A", "LOC", "X", wthk * 0.4, wthk * 0.6)                  # West inner
         mapdl.nsel("A", "LOC", "X", L + wthk * 1.4, L + wthk * 1.6)          # East inner
         mapdl.sf("ALL", "CONV", 4.0, "%TINT_TB%")
+
+        # Floor top surface: direct-gain solar (sunlight through the south
+        # glazing lands here) via a floor sol-air temperature — this is what
+        # makes the floor the warm "sun trap" in the FLIR view.
+        mapdl.allsel()
+        mapdl.nsel("S", "LOC", "Z", 0.13, 0.17)                             # top of the 0.15 m floor slab
+        mapdl.nsel("R", "LOC", "X", wthk + 0.1, wthk + L - 0.1)
+        mapdl.nsel("R", "LOC", "Y", wthk + 0.1, wthk + W - 0.1)
+        mapdl.sf("ALL", "CONV", "%HEXT_TB%", "%TSOLF_TB%")
 
         mapdl.allsel()
 

@@ -677,11 +677,28 @@ export default function Shelter3DViewer({
       // Solar Incident Vector Arrow — aimed at the south wall's window band
       // (not the geometric centre), so the low-angle ray reads as sunlight
       // entering the house through the south glazing.
-      const targetPoint = new THREE.Vector3(0, height_m * 0.45, -(width / 2));
-      const dir = new THREE.Vector3().subVectors(targetPoint, new THREE.Vector3(sunX, sunY, sunZ)).normalize();
+      const windowPoint = new THREE.Vector3(0, height_m * 0.45, -(width / 2));
+      const dir = new THREE.Vector3().subVectors(windowPoint, new THREE.Vector3(sunX, sunY, sunZ)).normalize();
       const arrowLength = sunDist * 0.9;
       const arrowHelper = new THREE.ArrowHelper(dir, new THREE.Vector3(sunX, sunY, sunZ), arrowLength, 0xf59e0b, 0.8, 0.4);
       scene.add(arrowHelper);
+
+      // Transmitted beam CONTINUING through the window down to the floor —
+      // the low winter sun enters at a shallow angle and its light pools on
+      // the floor near the south wall (passive-solar direct gain). Where it
+      // lands is the floor's warm "sun trap".
+      const floorSpot = new THREE.Vector3(0, 0.16, -(width / 2) + Math.min(width * 0.55, 2.2));
+      const beamGeo = new THREE.BufferGeometry().setFromPoints([windowPoint, floorSpot]);
+      const beamMat = new THREE.LineBasicMaterial({ color: 0xfcd34d, transparent: true, opacity: 0.9 });
+      scene.add(new THREE.Line(beamGeo, beamMat));
+
+      // Glowing solar footprint disc on the floor where the beam lands.
+      const footGeo = new THREE.CircleGeometry(Math.max(0.5, Math.min(width, length) * 0.18), 28);
+      const footMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+      const footMesh = new THREE.Mesh(footGeo, footMat);
+      footMesh.rotation.x = -Math.PI / 2;
+      footMesh.position.copy(floorSpot);
+      scene.add(footMesh);
     }
 
     // --- XYZ Axis Gizmo (house reference axes) ---
