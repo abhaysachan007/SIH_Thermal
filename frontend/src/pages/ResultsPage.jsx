@@ -265,6 +265,18 @@ export default function ResultsPage() {
         y += 4;
       }
 
+      // Cost & feasibility, when present
+      const ce = result?.cost_estimate;
+      if (ce) {
+        sectionHeader('Cost & Feasibility');
+        row('Estimated build cost (materials + glazing)', `Rs ${Number(ce.material_cost_inr).toLocaleString('en-IN')}`);
+        row('Annual heating energy', `${Number(ce.annual_heating_kwh).toLocaleString('en-IN')} kWh/yr`);
+        row('Annual heating cost', `Rs ${Number(ce.annual_heating_cost_inr).toLocaleString('en-IN')}`);
+        row('Heating cost saved vs baseline', `${ce.heating_cost_savings_pct}%`);
+        row('Annual savings vs baseline', `Rs ${Number(ce.annual_savings_inr).toLocaleString('en-IN')}`);
+        y += 4;
+      }
+
       // Recommendation
       sectionHeader('Engineering Recommendation');
       pdf.setFontSize(10);
@@ -504,6 +516,48 @@ export default function ResultsPage() {
           </div>
         </div>
       </div>
+
+      {/* Cost & Feasibility Card */}
+      {(() => {
+        const ce = result?.cost_estimate || optimalVariant?.cost_estimate;
+        if (!ce) return null;
+        const inr = (v) => v == null ? '—' : `₹${Number(v).toLocaleString('en-IN')}`;
+        return (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-800">
+                Cost & Real-World Feasibility
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Estimated Build Cost</span>
+                <div className="text-xl font-bold text-slate-900 mt-1">{inr(ce.material_cost_inr)}</div>
+                <span className="text-[10px] text-slate-500 block mt-0.5">Materials + glazing</span>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Annual Heating Cost</span>
+                <div className="text-xl font-bold text-amber-600 mt-1">{inr(ce.annual_heating_cost_inr)}</div>
+                <span className="text-[10px] text-slate-500 block mt-0.5">{ce.annual_heating_kwh?.toLocaleString('en-IN')} kWh/yr @ ₹7/kWh</span>
+              </div>
+              <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+                <span className="text-[10px] text-emerald-700 uppercase tracking-wider block">Heating Cost Saved</span>
+                <div className="text-xl font-bold text-emerald-600 mt-1">{ce.heating_cost_savings_pct}%</div>
+                <span className="text-[10px] text-emerald-700 block mt-0.5">vs uninsulated stone baseline</span>
+              </div>
+              <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+                <span className="text-[10px] text-emerald-700 uppercase tracking-wider block">Annual Savings</span>
+                <div className="text-xl font-bold text-emerald-600 mt-1">{inr(ce.annual_savings_inr)}</div>
+                <span className="text-[10px] text-emerald-700 block mt-0.5">per year vs baseline</span>
+              </div>
+            </div>
+            <div className="mt-3 text-[10px] font-mono text-slate-400">
+              Assumptions: {ce.assumptions?.winter_heating_days} heating days/yr · {ce.assumptions?.comfort_setpoint_C}°C setpoint · Baseline: {ce.assumptions?.baseline}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Analytics Tabs Workstation */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">

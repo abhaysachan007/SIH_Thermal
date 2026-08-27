@@ -155,6 +155,11 @@ class SimulationService:
                 None, _select_and_run, shelter_input, self.materials_db, climate_profile
             )
             raw = process_raw_results(raw)
+            try:
+                from app.services.cost_estimator import estimate_costs
+                raw.update(estimate_costs(shelter_input, raw))
+            except Exception:
+                pass
             raw['status'] = 'complete'
             raw['job_id'] = job_id
             raw['engine_used'] = raw.get('engine_used', 'python_fdm')
@@ -191,6 +196,11 @@ class SimulationService:
                     None, _select_and_run, variant, self.materials_db, climate_profile
                 )
                 raw = process_raw_results(raw)
+                try:
+                    from app.services.cost_estimator import estimate_costs
+                    raw.update(estimate_costs(variant, raw))
+                except Exception:
+                    pass
                 raw['job_id'] = str(uuid.uuid4())
                 raw['status'] = 'complete'
                 raw['engine_used'] = raw.get('engine_used', 'python_fdm')
