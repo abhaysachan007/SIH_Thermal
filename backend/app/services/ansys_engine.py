@@ -266,6 +266,57 @@ def _interior_proxy_temps(mapdl, L, W, H, wthk):
     return float(np.mean(selected)), float(np.max(selected)), float(np.min(selected))
 
 
+def _dome_interior_temps(mapdl, dome_r, wthk):
+    """Interior-condition proxy for the hemispherical (igloo) shape: the
+    inner shell nodes plus the floor top, selected by radius from the origin
+    rather than by a cartesian box (the room's air volume isn't meshed)."""
+    mapdl.allsel()
+    all_temps = mapdl.post_processing.nodal_temperature
+    if callable(all_temps):
+        all_temps = all_temps()
+    coords = mapdl.mesh.nodes
+    if callable(coords):
+        coords = coords()
+    r = np.sqrt(coords[:, 0] ** 2 + coords[:, 1] ** 2 + coords[:, 2] ** 2)
+    z = coords[:, 2]
+    inner = (r >= dome_r - wthk - 0.05) & (r <= dome_r - wthk + 0.10) & (z > 0.05)
+    floor = (z >= 0.10) & (z <= 0.14)
+    sel = all_temps[inner | floor]
+    if len(sel) == 0:
+        return None, None, None
+    return float(np.mean(sel)), float(np.max(sel)), float(np.min(sel))
+
+
+def _dome_surface_temps(mapdl, dome_r, wthk):
+    """Per-region inner temperatures for the dome, mapped onto the same
+    named fields the FLIR panel expects (south = y<0 inner shell, etc.)."""
+    mapdl.allsel()
+    all_temps = mapdl.post_processing.nodal_temperature
+    if callable(all_temps):
+        all_temps = all_temps()
+    coords = mapdl.mesh.nodes
+    if callable(coords):
+        coords = coords()
+    x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
+    r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+    inner_shell = (r >= dome_r - wthk - 0.05) & (r <= dome_r - wthk + 0.10) & (z > 0.05)
+
+    def mean_of(extra):
+        sel = all_temps[inner_shell & extra]
+        return float(np.mean(sel)) if len(sel) else None
+
+    return {
+        "south_wall_inner_C": mean_of(y < -0.1),
+        "north_wall_inner_C": mean_of(y > 0.1),
+        "east_wall_inner_C": mean_of(x > 0.1),
+        "west_wall_inner_C": mean_of(x < -0.1),
+        "roof_inner_C": mean_of(z > (dome_r - wthk) * 0.6),   # dome crown
+        "floor_surface_C": (lambda s: float(np.mean(s)) if len(s) else None)(
+            all_temps[(z >= 0.10) & (z <= 0.14)]
+        ),
+    }
+
+
 def _build_and_solve_pymapdl(inputs, materials_db: dict, climate_profile: dict, job_dir: Path) -> dict:
     """
     Launch PyMAPDL, build shelter geometry, apply thermal BCs, solve transient,
@@ -317,21 +368,11 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
     shape = getattr(inputs, 'shape', 'rectangular')
     orient = float(getattr(inputs, 'orientation_deg', 180))
 
-    if shape == 'dome':
-        # shelter_design.apdl builds a genuinely different geometry for
-        # SHAPE=1 (hemisphere + cylindrical tunnel), but every boundary
-        # condition and temperature-extraction call below assumes the
-        # rectangular gable-roof box (planar X/Y/Z faces at wall-thickness
-        # offsets). Applying those selections to a dome would silently
-        # select the wrong nodes — or none — and produce meaningless
-        # results instead of a clear failure. Fail fast here so the caller
-        # falls back to the FDM engine (which does support the dome shape)
-        # with an honest reason, rather than shipping wrong physics.
-        raise NotImplementedError(
-            "ANSYS engine does not yet support the dome/igloo shape "
-            "(boundary conditions are only implemented for the rectangular "
-            "gable geometry). Falling back to Python FDM, which supports it."
-        )
+    is_dome = (shape == 'dome')
+    # Hemisphere radius the template uses for SHAPE=1 (see shelter_design.apdl:
+    # *SET,DOME_R,(SLEN+SWID)*0.25+0.3). Dome BCs and extraction select nodes
+    # by radius in a spherical coordinate system instead of by planar X/Y/Z.
+    dome_r = (L + W) * 0.25 + 0.3
 
     wmat = materials_db.get(getattr(inputs, 'wall_material_id', 'mud_brick'), {})
     rmat = materials_db.get(getattr(inputs, 'roof_material_id', 'mud_brick'), {})
@@ -561,43 +602,88 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
     #   Z = height (-0.3 .. SHGT+...)   <- Z is UP, not Y
     # Every selection below follows that convention. Using Y as the vertical
     # axis selects zero nodes and silently produces no thermal result.
-    PITCH_H = 1.6                       # matches *SET,PH,1.6 in the template
-    slope_top = H + PITCH_H * 0.55 + 0.15   # top of the two gable slopes
-    ridge_top = H + PITCH_H + 0.15          # top of the ridge cap
+    if is_dome:
+        # --- Dome / igloo boundary conditions (spherical selections) ---
+        # Geometry (shelter_design.apdl, SHAPE=1) is centred at the origin
+        # with Z up: a hemispherical shell of radius (dome_r - wthk) .. dome_r,
+        # a floor slab (z 0..0.12), and a foundation ring (z -0.12..0).
+        # CSYS,2 is MAPDL's spherical system, where LOC,X is the radius — so
+        # radius bands select the inner/outer shells unambiguously.
 
-    # Exterior surface selection + convection BC
-    mapdl.nsel("S", "LOC", "Z", -0.31, -0.29)       # Foundation bottom
-    mapdl.nsel("A", "LOC", "X", -0.01, 0.01)        # West outer
-    mapdl.nsel("A", "LOC", "X", L + 2*wthk - 0.01, L + 2*wthk + 0.01)  # East outer
-    mapdl.nsel("A", "LOC", "Z", slope_top - 0.02, slope_top + 0.05)    # Roof slope tops
-    mapdl.nsel("A", "LOC", "Z", ridge_top - 0.02, ridge_top + 0.05)    # Ridge cap top
-    mapdl.nsel("A", "LOC", "Y", -0.01, 0.01)        # South outer
-    mapdl.nsel("A", "LOC", "Y", W + 2*wthk - 0.01, W + 2*wthk + 0.01)  # North outer
-    mapdl.cm("EXT_NODES", "NODE")
-    mapdl.sf("EXT_NODES", "CONV", "%HEXT_TB%", "%TAMB_TB%")
+        # Exterior: outer shell + entrance tunnel outer + foundation underside
+        mapdl.csys(2)
+        mapdl.nsel("S", "LOC", "X", dome_r - 0.03, dome_r + 0.6)
+        mapdl.csys(0)
+        mapdl.nsel("A", "LOC", "Z", -0.13, -0.11)   # foundation bottom
+        mapdl.cm("EXT_NODES", "NODE")
+        mapdl.sf("EXT_NODES", "CONV", "%HEXT_TB%", "%TAMB_TB%")
 
-    # Solar flux on south wall exterior (Y = 0 face)
-    mapdl.nsel("S", "LOC", "Y", -0.01, 0.01)
-    mapdl.sf("ALL", "HFLUX", "%QSOLS_TB%")
+        # Solar flux on the outer dome shell (acts as the roof of an igloo)
+        mapdl.csys(2)
+        mapdl.nsel("S", "LOC", "X", dome_r - 0.03, dome_r + 0.03)
+        mapdl.csys(0)
+        mapdl.sf("ALL", "HFLUX", "%QSOLR_TB%")
 
-    # Solar flux on roof (both slope tops and the ridge cap)
-    mapdl.nsel("S", "LOC", "Z", slope_top - 0.02, slope_top + 0.05)
-    mapdl.nsel("A", "LOC", "Z", ridge_top - 0.02, ridge_top + 0.05)
-    mapdl.sf("ALL", "HFLUX", "%QSOLR_TB%")
+        # Extra south-facing solar on the lower dome band (y < 0 = south)
+        mapdl.csys(2)
+        mapdl.nsel("S", "LOC", "X", dome_r - 0.03, dome_r + 0.03)
+        mapdl.csys(0)
+        mapdl.nsel("R", "LOC", "Y", -(dome_r + 1.0), 0.0)
+        mapdl.sf("ALL", "HFLUX", "%QSOLS_TB%")
 
-    # Ground BC: fixed deep-ground temperature at the foundation underside
-    mapdl.nsel("S", "LOC", "Z", -0.32, -0.28)
-    mapdl.d("ALL", "TEMP", 4.0)
+        # Ground BC at the foundation underside
+        mapdl.csys(0)
+        mapdl.nsel("S", "LOC", "Z", -0.13, -0.11)
+        mapdl.d("ALL", "TEMP", 4.0)
 
-    # Interior air convection (inner wall faces)
-    mapdl.allsel()
-    mapdl.nsel("S", "LOC", "Y", wthk * 0.4, wthk * 0.6)                  # South inner
-    mapdl.nsel("A", "LOC", "Y", W + wthk * 1.4, W + wthk * 1.6)          # North inner
-    mapdl.nsel("A", "LOC", "X", wthk * 0.4, wthk * 0.6)                  # West inner
-    mapdl.nsel("A", "LOC", "X", L + wthk * 1.4, L + wthk * 1.6)          # East inner
-    mapdl.sf("ALL", "CONV", 4.0, "%TINT_TB%")
+        # Interior air convection: inner shell (upper hemisphere) + floor top
+        mapdl.csys(2)
+        mapdl.nsel("S", "LOC", "X", dome_r - wthk - 0.03, dome_r - wthk + 0.06)
+        mapdl.csys(0)
+        mapdl.nsel("R", "LOC", "Z", 0.05, dome_r + 0.5)   # keep z > 0 interior
+        mapdl.nsel("A", "LOC", "Z", 0.10, 0.14)           # floor top surface
+        mapdl.sf("ALL", "CONV", 4.0, "%TINT_TB%")
 
-    mapdl.allsel()
+        mapdl.csys(0)
+        mapdl.allsel()
+    else:
+        PITCH_H = 1.6                       # matches *SET,PH,1.6 in the template
+        slope_top = H + PITCH_H * 0.55 + 0.15   # top of the two gable slopes
+        ridge_top = H + PITCH_H + 0.15          # top of the ridge cap
+
+        # Exterior surface selection + convection BC
+        mapdl.nsel("S", "LOC", "Z", -0.31, -0.29)       # Foundation bottom
+        mapdl.nsel("A", "LOC", "X", -0.01, 0.01)        # West outer
+        mapdl.nsel("A", "LOC", "X", L + 2*wthk - 0.01, L + 2*wthk + 0.01)  # East outer
+        mapdl.nsel("A", "LOC", "Z", slope_top - 0.02, slope_top + 0.05)    # Roof slope tops
+        mapdl.nsel("A", "LOC", "Z", ridge_top - 0.02, ridge_top + 0.05)    # Ridge cap top
+        mapdl.nsel("A", "LOC", "Y", -0.01, 0.01)        # South outer
+        mapdl.nsel("A", "LOC", "Y", W + 2*wthk - 0.01, W + 2*wthk + 0.01)  # North outer
+        mapdl.cm("EXT_NODES", "NODE")
+        mapdl.sf("EXT_NODES", "CONV", "%HEXT_TB%", "%TAMB_TB%")
+
+        # Solar flux on south wall exterior (Y = 0 face)
+        mapdl.nsel("S", "LOC", "Y", -0.01, 0.01)
+        mapdl.sf("ALL", "HFLUX", "%QSOLS_TB%")
+
+        # Solar flux on roof (both slope tops and the ridge cap)
+        mapdl.nsel("S", "LOC", "Z", slope_top - 0.02, slope_top + 0.05)
+        mapdl.nsel("A", "LOC", "Z", ridge_top - 0.02, ridge_top + 0.05)
+        mapdl.sf("ALL", "HFLUX", "%QSOLR_TB%")
+
+        # Ground BC: fixed deep-ground temperature at the foundation underside
+        mapdl.nsel("S", "LOC", "Z", -0.32, -0.28)
+        mapdl.d("ALL", "TEMP", 4.0)
+
+        # Interior air convection (inner wall faces)
+        mapdl.allsel()
+        mapdl.nsel("S", "LOC", "Y", wthk * 0.4, wthk * 0.6)                  # South inner
+        mapdl.nsel("A", "LOC", "Y", W + wthk * 1.4, W + wthk * 1.6)          # North inner
+        mapdl.nsel("A", "LOC", "X", wthk * 0.4, wthk * 0.6)                  # West inner
+        mapdl.nsel("A", "LOC", "X", L + wthk * 1.4, L + wthk * 1.6)          # East inner
+        mapdl.sf("ALL", "CONV", 4.0, "%TINT_TB%")
+
+        mapdl.allsel()
 
     # Initial temperature condition
     mapdl.ic("ALL", "TEMP", T0)
@@ -635,20 +721,30 @@ def _run_thermal_fea(mapdl, inputs, materials_db: dict, climate_profile: dict) -
         T_max_all, T_min_all = T0, T0
 
     # Interior-temperature proxy: the room's interior air volume isn't
-    # meshed (only the solid envelope is), so this uses the union of inner
-    # wall-surface node bands rather than an empty coordinate box.
-    T_int_avg, T_int_max, T_int_min = _interior_proxy_temps(mapdl, L, W, H, wthk)
+    # meshed (only the solid envelope is), so this uses the inner-surface
+    # node bands (radial for the dome, box faces for the rectangular shape)
+    # rather than an empty coordinate box.
+    if is_dome:
+        T_int_avg, T_int_max, T_int_min = _dome_interior_temps(mapdl, dome_r, wthk)
+    else:
+        T_int_avg, T_int_max, T_int_min = _interior_proxy_temps(mapdl, L, W, H, wthk)
     if T_int_avg is None:
         T_int_avg, T_int_max, T_int_min = T0, T0, T0
 
     # Per-surface inner temperatures for thermal visualization
-    surface_temps = _extract_surface_temperatures(mapdl, L, W, H, wthk)
+    if is_dome:
+        surface_temps = _dome_surface_temps(mapdl, dome_r, wthk)
+    else:
+        surface_temps = _extract_surface_temperatures(mapdl, L, W, H, wthk)
 
     # Extract 24-hour interior temperature profile
     hourly_inside = []
     for ih in range(1, 25):
         mapdl.set(ih)
-        t_avg, _, _ = _interior_proxy_temps(mapdl, L, W, H, wthk)
+        if is_dome:
+            t_avg, _, _ = _dome_interior_temps(mapdl, dome_r, wthk)
+        else:
+            t_avg, _, _ = _interior_proxy_temps(mapdl, L, W, H, wthk)
         hourly_inside.append(float(t_avg) if t_avg is not None else float(T0))
 
     mapdl.finish()
