@@ -34,7 +34,9 @@ class ShelterInput(BaseModel):
     length_m: float = Field(gt=1, le=50, default=6.0)
     width_m: float = Field(gt=1, le=50, default=4.0)
     height_m: float = Field(gt=1, le=10, default=3.0)
-    shape: Literal['rectangular', 'dome'] = 'rectangular'
+    shape: Literal['rectangular', 'dome', 'aframe'] = 'rectangular'
+    # aframe = steep A-frame snow-shedding cabin; thermally solved through the
+    # rectangular envelope path, rendered as its own form in the 3D viewer.
     wall_material_id: str = 'mud_brick'
     wall_thickness_m: float = Field(gt=0.04, le=2.0, default=0.30)
     roof_material_id: str = 'mud_brick'

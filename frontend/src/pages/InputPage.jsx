@@ -203,9 +203,10 @@ function GeometryStep({ data, onChange, errors }) {
       {/* Shape Form Selector */}
       <div className="space-y-2">
         <label className="text-xs font-mono font-bold uppercase tracking-wider text-slate-700">Envelope Architecture</label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { value: 'rectangular', label: 'Alpine Rectangular', sub: 'Pitched Gable / Flat Overhang' },
+            { value: 'aframe', label: 'A-Frame Cabin', sub: 'Steep Snow-Shedding Alpine' },
             { value: 'dome', label: 'Igloo Hemisphere', sub: 'Aerodynamic Snow Arch Form' },
           ].map((s) => (
             <button
@@ -623,7 +624,7 @@ function ReviewStep({ data, materials, climateProfiles, compareMode, variants, o
   const degLabel = (d) => `${d}° (${d === 180 ? 'South Direct' : 'Azimuth'})`;
 
   const rows = [
-    ['Structural Form', data.shape === 'dome' ? 'Igloo Dome Hemisphere' : 'Alpine Rectangular Envelope'],
+    ['Structural Form', data.shape === 'dome' ? 'Igloo Dome Hemisphere' : data.shape === 'aframe' ? 'A-Frame Alpine Cabin' : 'Alpine Rectangular Envelope'],
     ['Dimensions (L×W×H)', `${data.length_m}m × ${data.width_m}m × ${data.height_m}m`],
     ['Wall Assembly', `${mat(data.wall_material_id)} (${(data.wall_thickness_m * 100).toFixed(0)} cm)`],
     ['Roof Assembly', `${mat(data.roof_material_id)} (${(data.roof_thickness_m * 100).toFixed(0)} cm)`],

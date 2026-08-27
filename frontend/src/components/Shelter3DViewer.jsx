@@ -562,6 +562,64 @@ export default function Shelter3DViewer({
       iglooLight.position.set(0, domeH * 0.4, 0);
       scene.add(iglooLight);
 
+    } else if (shape === 'aframe') {
+      // --- A-Frame Alpine Cabin: steep triangular snow-shedding form ---
+      // The two roof planes ARE the walls, meeting at a high ridge; front and
+      // back are triangular gable walls. Iconic for heavy-snow alpine sites.
+      const apexH = Math.max(height_m * 1.35, width * 0.95);
+      const overhang = 0.4;
+      const totalL = length + overhang * 2;
+      const halfW = width / 2 + wallThk;
+      const slopeLen = Math.sqrt(halfW * halfW + apexH * apexH);
+      const slopeAngle = Math.atan2(apexH, halfW);
+
+      // South & North roof-wall planes (these double as the walls)
+      const makeSlope = (mat, sign) => {
+        const geo = new THREE.BoxGeometry(totalL, 0.16, slopeLen);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(0, apexH / 2, sign * (halfW / 2));
+        mesh.rotation.x = sign > 0 ? slopeAngle : -slopeAngle;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        return mesh;
+      };
+      shelterGroup.add(makeSlope(sWallMat, 1));   // south-facing slope
+      shelterGroup.add(makeSlope(nWallMat, -1));  // north-facing slope
+
+      // Ridge beam at the apex
+      const ridgeGeo = new THREE.BoxGeometry(totalL + 0.1, 0.18, 0.22);
+      const ridgeMesh = new THREE.Mesh(ridgeGeo, new THREE.MeshStandardMaterial({
+        color: thermalMode ? roofTrimThermal : 0x6b4423, roughness: 0.5, wireframe,
+      }));
+      ridgeMesh.position.set(0, apexH + 0.02, 0);
+      shelterGroup.add(ridgeMesh);
+
+      // Triangular gable end walls (front = south glazing, back solid)
+      const makeGable = (mat) => {
+        const sh = new THREE.Shape();
+        sh.moveTo(-halfW, 0);
+        sh.lineTo(halfW, 0);
+        sh.lineTo(0, apexH);
+        sh.closePath();
+        const geo = new THREE.ExtrudeGeometry(sh, { depth: wallThk, bevelEnabled: false });
+        return new THREE.Mesh(geo, mat);
+      };
+      const frontGable = makeGable(sWallMat);
+      frontGable.rotation.y = Math.PI / 2;
+      frontGable.position.set(cx + overhang, 0, 0);
+      shelterGroup.add(frontGable);
+      const backGable = makeGable(nWallMat);
+      backGable.rotation.y = Math.PI / 2;
+      backGable.position.set(-cx - overhang - wallThk, 0, 0);
+      shelterGroup.add(backGable);
+
+      // South-facing glazing panel on the front gable (passive solar aperture)
+      const winGeo = new THREE.PlaneGeometry(width * 0.5, apexH * 0.5);
+      const winMesh = new THREE.Mesh(winGeo, glassMat);
+      winMesh.rotation.y = -Math.PI / 2;
+      winMesh.position.set(cx + overhang + 0.02, apexH * 0.32, 0);
+      shelterGroup.add(winMesh);
+
     } else {
       // Rectangular house walls
       const sWall = buildWall('south', length, wallLayouts.south.doors, wallLayouts.south.windows, sWallMat);
@@ -582,7 +640,7 @@ export default function Shelter3DViewer({
     }
 
     // --- 4. Realistic Pitched / Gable Roof vs Flat Roof (rectangular only) ---
-    if (showRoof && shape !== 'dome') {
+    if (showRoof && shape !== 'dome' && shape !== 'aframe') {
       if (roofType === 'pitched') {
         const pitchHeight = 1.6;
         const totalW = width + wallThk * 2 + 0.8;
@@ -786,7 +844,7 @@ export default function Shelter3DViewer({
         <div className="flex items-center gap-2.5">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="font-mono font-bold text-slate-200 uppercase tracking-wider text-[11px]">
-            WebGL 3D Engine · {shape === 'dome' ? 'Igloo Hemisphere CAD' : 'Alpine Gable Shelter CAD'}
+            WebGL 3D Engine · {shape === 'dome' ? 'Igloo Hemisphere CAD' : shape === 'aframe' ? 'A-Frame Alpine Cabin CAD' : 'Alpine Gable Shelter CAD'}
             {ansysData?.engine_used && (
               <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] ${
                 ansysData.engine_used.includes('ansys') ? 'bg-emerald-900 text-emerald-300' : 'bg-sky-900 text-sky-300'
@@ -959,7 +1017,7 @@ export default function Shelter3DViewer({
       <div className="bg-slate-900/95 px-5 py-3 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
         <div>
           <span className="text-slate-400 block text-[10px] uppercase">Envelope Form:</span>
-          <span className="font-semibold text-slate-200">{shape === 'dome' ? 'Igloo Hemisphere' : roofType === 'pitched' ? 'Alpine Gable Pitched' : 'Flat Slab Overhang'}</span>
+          <span className="font-semibold text-slate-200">{shape === 'dome' ? 'Igloo Hemisphere' : shape === 'aframe' ? 'A-Frame Alpine Cabin' : roofType === 'pitched' ? 'Alpine Gable Pitched' : 'Flat Slab Overhang'}</span>
         </div>
         <div>
           <span className="text-slate-400 block text-[10px] uppercase">Dimensions:</span>
