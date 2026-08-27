@@ -44,3 +44,7 @@ export const pollTimeoutMsFor = (engine) => (engine === 'ansys' ? 15 * 60 * 1000
 export const runOptimizer = (shelterInput) =>
   API.post('/api/optimize', shelterInput).then(r => r.data);
 
+// Fetch a live hourly climate profile from the NASA POWER API (via backend).
+export const fetchLiveClimate = (latitude = 34.15, longitude = 77.57) =>
+  API.get('/api/climate/live', { params: { latitude, longitude } }).then(r => r.data);
+

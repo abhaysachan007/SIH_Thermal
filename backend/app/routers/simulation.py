@@ -36,6 +36,40 @@ async def get_compare_result(job_id: str):
         raise HTTPException(status_code=404, detail=f'Comparison job not found: {job_id}')
     return job
 
+@router.get("/climate/live")
+async def get_live_climate(
+    latitude: float = 34.15,
+    longitude: float = 77.57,
+    date: str = None,
+    season: str = "winter",
+):
+    """
+    Fetch a live hourly climate profile from the NASA POWER API and register
+    it so it can be used as a climate_profile_id ('nasa_live'). Falls back
+    with a clear message if the live fetch fails — never raises.
+    """
+    from app.services.nasa_climate import fetch_nasa_climate
+
+    svc = get_simulation_service()
+    profile, note = fetch_nasa_climate(latitude, longitude, date, season)
+    if profile is None:
+        return {"ok": False, "detail": note}
+
+    svc.climate_db[profile["id"]] = profile
+    temps = [h["ambient_temp_C"] for h in profile["hourly_data"]]
+    solars = [h["solar_irradiance_W_m2"] for h in profile["hourly_data"]]
+    return {
+        "ok": True,
+        "climate_profile_id": profile["id"],
+        "name": profile["name"],
+        "source": profile.get("source"),
+        "source_date": profile.get("source_date"),
+        "min_temp_C": round(min(temps), 2) if temps else None,
+        "max_temp_C": round(max(temps), 2) if temps else None,
+        "peak_solar_W_m2": round(max(solars), 2) if solars else None,
+    }
+
+
 @router.post("/optimize")
 async def optimize_shelter(payload: dict):
     """

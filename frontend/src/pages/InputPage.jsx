@@ -11,6 +11,7 @@ import {
   submitCompare,
   pollUntilDone,
   pollTimeoutMsFor,
+  fetchLiveClimate,
 } from '../api/simulationApi';
 
 const STEPS = ['Geometry', 'Materials', 'Orientation', 'Submit'];
@@ -479,6 +480,31 @@ function MaterialsStep({ data, onChange, materials, errors }) {
 
 // --- Step 3: Orientation & Climate ---
 function OrientationStep({ data, onChange, climateProfiles, errors, compareMode, onCompareModeChange }) {
+  const [liveStatus, setLiveStatus] = useState(null); // null | 'loading' | 'ok' | 'error'
+  const [liveNote, setLiveNote] = useState('');
+
+  const handleFetchLive = async () => {
+    setLiveStatus('loading');
+    setLiveNote('');
+    try {
+      const res = await fetchLiveClimate(34.15, 77.57);
+      if (!res?.ok) {
+        setLiveStatus('error');
+        setLiveNote(res?.detail || 'Live fetch failed');
+        return;
+      }
+      onChange('climate_profile_id', res.climate_profile_id);
+      if (res.min_temp_C != null) onChange('min_ambient_temp_C', res.min_temp_C);
+      if (res.max_temp_C != null) onChange('max_ambient_temp_C', res.max_temp_C);
+      if (res.peak_solar_W_m2 != null) onChange('peak_solar_radiation_W_m2', res.peak_solar_W_m2);
+      setLiveStatus('ok');
+      setLiveNote(`${res.name} · ${res.min_temp_C}°C to ${res.max_temp_C}°C · peak ${res.peak_solar_W_m2} W/m²`);
+    } catch (e) {
+      setLiveStatus('error');
+      setLiveNote(e?.message || 'Network error');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -531,6 +557,25 @@ function OrientationStep({ data, onChange, climateProfiles, errors, compareMode,
         {errors.climate_profile_id && (
           <p className="text-rose-500 text-xs mt-1">{errors.climate_profile_id}</p>
         )}
+
+        {/* Live NASA POWER climate fetch */}
+        <div className="mt-2 flex flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={handleFetchLive}
+            disabled={liveStatus === 'loading'}
+            className="self-start inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-sky-300 border border-slate-800 text-xs font-mono font-bold transition-all"
+          >
+            <span className={`w-2 h-2 rounded-full ${liveStatus === 'loading' ? 'bg-amber-400 animate-pulse' : 'bg-sky-400'}`} />
+            {liveStatus === 'loading' ? 'Fetching NASA POWER…' : '🛰️ Fetch Live Leh Climate (NASA POWER)'}
+          </button>
+          {liveStatus === 'ok' && (
+            <p className="text-[11px] font-mono text-emerald-600">✓ {liveNote}</p>
+          )}
+          {liveStatus === 'error' && (
+            <p className="text-[11px] font-mono text-amber-600">Live fetch unavailable ({liveNote}). Using bundled climate dataset.</p>
+          )}
+        </div>
       </div>
 
       {/* Duration Selector */}
