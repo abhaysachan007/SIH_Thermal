@@ -6,9 +6,15 @@ import os
 import json
 import logging
 from typing import Dict, Any, Optional, List
-import pymysql
 
 logger = logging.getLogger(__name__)
+
+try:
+    import pymysql
+    _PYMYSQL_OK = True
+except BaseException:
+    pymysql = None
+    _PYMYSQL_OK = False
 
 # TiDB Cloud MySQL Configuration
 TIDB_CONFIG = {
@@ -18,14 +24,17 @@ TIDB_CONFIG = {
     "password": os.getenv("TIDB_PASSWORD", "W5UHebtqdfJtwIvb"),
     "database": os.getenv("TIDB_DATABASE", "shelter"),
     "ssl": {"ssl_mode": "REQUIRED"},
-    "cursorclass": pymysql.cursors.DictCursor,
+    "cursorclass": None,
     "autocommit": True,
     "connect_timeout": 10,
 }
 
 def get_connection():
     """Create a secure SSL connection to TiDB Cloud MySQL."""
-    return pymysql.connect(**TIDB_CONFIG)
+    if not _PYMYSQL_OK:
+        raise RuntimeError("pymysql unavailable — running in offline mode")
+    cfg = {**TIDB_CONFIG, "cursorclass": pymysql.cursors.DictCursor}
+    return pymysql.connect(**cfg)
 
 def init_db():
     """Initialize tables in TiDB Cloud MySQL."""
