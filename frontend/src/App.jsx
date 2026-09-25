@@ -7,90 +7,74 @@ function NavigationHeader() {
   const isResults = location.pathname === '/results';
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md text-white border-b border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        {/* Brand Logo & Name */}
-        <Link to="/" className="flex items-center gap-3.5 group">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-inner shadow-white/20 border border-sky-400/30 group-hover:border-sky-400/60 transition-all">
-            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <nav className="nav-shell">
+      <div className="nav-inner">
+        <Link to="/" className="nav-logo">
+          <div className="nav-logo-mark">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{color:'#000'}}>
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
-              <circle cx="12" cy="7" r="1.5" fill="currentColor" />
             </svg>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-base tracking-tight text-white font-mono">
-                THERMA<span className="text-sky-400">·</span>LADAKH
-              </span>
-              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-semibold tracking-wider">
-                v4.2 CAD
-              </span>
-            </div>
-            <span className="text-[11px] text-slate-400 block font-normal leading-none mt-0.5">
-              High-Altitude Passive Thermal Simulation Lab
-            </span>
+            <div className="nav-wordmark">THERMA<span>·</span>LADAKH</div>
+            <div className="nav-sub">High-Altitude Passive Thermal Simulation</div>
           </div>
         </Link>
 
-        {/* Center / Right Environment Telemetry Badges */}
-        <div className="hidden md:flex items-center gap-3 text-xs font-mono">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-            <span className="text-slate-400">LOC:</span>
-            <span className="font-semibold text-slate-200">Leh 34.15°N · 3500m</span>
+        <div className="nav-pills" style={{display: 'flex'}}>
+          <div className="nav-pill" style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+            <span className="dot" />
+            <span style={{color: 'var(--text-3)'}}>LOC:</span>
+            <span style={{color: 'var(--text-2)', fontWeight: 600}}>Leh 34.15°N · 3500m</span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300">
-            <span className="text-slate-400">SOLVER:</span>
-            <span className="font-semibold text-sky-400">ANSYS FEA + FDM</span>
+          <div className="nav-pill" style={{display: 'none'}}>
+            <span style={{color: 'var(--text-3)'}}>SOLVER:</span>
+            <span style={{color: 'var(--ice)', fontWeight: 600}}>ANSYS FEA + FDM</span>
           </div>
+
+          <div className="nav-badge" style={{display: 'inline-block'}}>v4.2 CAD</div>
 
           {isResults && (
             <Link
               to="/"
-              className="ml-2 px-3 py-1.5 rounded-md bg-sky-600 hover:bg-sky-500 text-white font-sans text-xs font-semibold transition-all shadow-sm flex items-center gap-1.5"
+              className="btn-primary"
+              style={{textDecoration:'none'}}
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
               New Design
             </Link>
           )}
         </div>
       </div>
-    </header>
+    </nav>
   );
 }
 
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen flex flex-col bg-slate-50">
+      <div style={{minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)'}}>
         <NavigationHeader />
 
-        {/* Main Viewport Container */}
-        <main className="flex-1 py-8 px-4 sm:px-6 max-w-7xl mx-auto w-full">
-          <Routes>
-            <Route path="/" element={<InputPage />} />
-            <Route path="/results" element={<ResultsPage />} />
-          </Routes>
+        <main style={{flex: 1, padding: '40px 0'}}>
+          <div className="page-wrap">
+            <Routes>
+              <Route path="/" element={<InputPage />} />
+              <Route path="/results" element={<ResultsPage />} />
+            </Routes>
+          </div>
         </main>
 
-        {/* Technical Footer */}
-        <footer className="bg-slate-950 text-slate-400 text-xs py-6 border-t border-slate-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="font-mono font-bold text-slate-300">THERMA·LADAKH</span>
-              <span className="text-slate-600">|</span>
-              <span className="text-slate-400">Passive Thermal Architecture & Numerical Computation for Extreme High-Altitude Climates</span>
-            </div>
-            <div className="flex items-center gap-4 text-[11px] font-mono text-slate-500">
-              <span>FDM Implicit 1D/3D</span>
-              <span>•</span>
-              <span>ANSYS MAPDL SOLID70</span>
-              <span>•</span>
-              <span>ISO 13790 Compliant</span>
+        <footer className="footer-shell">
+          <div className="footer-inner">
+            <span className="footer-brand">THERMA·LADAKH</span>
+            <div className="footer-pills">
+              <span className="footer-pill">FDM Implicit 1D/3D</span>
+              <span className="footer-pill">ANSYS MAPDL SOLID70</span>
+              <span className="footer-pill">ISO 13790 Compliant</span>
+              <span className="footer-pill">NASA POWER Climate API</span>
             </div>
           </div>
         </footer>
