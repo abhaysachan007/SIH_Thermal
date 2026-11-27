@@ -1,0 +1,67 @@
+# LADAKH SHELTER OPTIMIZER - COMPLETE RESOURCE DATABASE
+
+## CLIMATE DATA SOURCES
+1. NASA POWER API
+   - Link: https://power.larc.nasa.gov/
+   - Description: 40+ years of global climate data
+   - Parameters: Temperature, Solar Irradiance, Wind
+
+2. India Meteorological Department
+   - Link: https://mausam.imd.gov.in/
+   - Leh Station Data: Available on request
+
+3. NREL NSRDB
+   - Link: https://nsrdb.nrel.gov/
+   - Solar radiation data for India
+
+## SOFTWARE REPOSITORIES
+1. PyMAPDL (ANSYS Python Interface)
+   - GitHub: https://github.com/ansys/pymapdl
+   - Docs: https://mapdl.docs.pyansys.com/
+
+2. pvlib-python (Solar Modeling)
+   - GitHub: https://github.com/pvlib/pvlib-python
+   - Docs: https://pvlib-python.readthedocs.io/
+
+3. FiPy (PDE Solver)
+   - GitHub: https://github.com/usnistgov/fipy
+   - Docs: https://www.ctcms.nist.gov/fipy/
+
+## RESEARCH PAPERS
+1. "Passive Solar Architecture in Cold Climates" - GERES
+   - Download: https://www.geres.eu/en/projects/
+
+2. "Thermal Performance of Ladakhi Houses" - Singh et al. (2009)
+   - DOI: 10.1016/j.enbuild.2009.06.009
+
+3. "Solar Passive Building Design" - Chel & Tiwari (2010)
+   - DOI: 10.1016/j.rser.2009.10.005
+
+## MATERIAL DATABASES
+1. ASHRAE Handbook - Fundamentals
+   - Link: https://www.ashrae.org/
+
+2. MatWeb Material Property Database
+   - Link: http://www.matweb.com/
+
+3. BIS Indian Standards
+   - IS 3792:1978, IS 1725:2013
+   - Link: https://www.services.bis.gov.in/
+
+## VALIDATION TOOLS
+1. EnergyPlus (DOE Building Simulator)
+   - Link: https://energyplus.net/
+   - Validation datasets included
+
+2. TRNSYS (Transient Simulation)
+   - Link: http://www.trnsys.com/
+
+## DEPLOYMENT RESOURCES
+1. Docker Hub - Python Images
+   - Link: https://hub.docker.com/_/python
+
+2. Heroku Deployment Guide
+   - Link: https://devcenter.heroku.com/
+
+3. AWS EC2 ANSYS Setup
+   - Link: https://aws.amazon.com/hpc/

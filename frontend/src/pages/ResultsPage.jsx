@@ -1,13 +1,16 @@
-import { useRef, useState, useEffect } from 'react';
+import { lazy, Suspense, useRef, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 
-import TemperatureChart from '../components/TemperatureChart';
-import SolarGainChart from '../components/SolarGainChart';
-import HeatFlowChart from '../components/HeatFlowChart';
 import ComparisonTable from '../components/ComparisonTable';
 import RecommendationCard from '../components/RecommendationCard';
-import Shelter3DViewer from '../components/Shelter3DViewer';
+import { runBudgetOptimizer, validateModel } from '../api/simulationApi';
+
+const TemperatureChart = lazy(() => import('../components/TemperatureChart'));
+const SolarGainChart = lazy(() => import('../components/SolarGainChart'));
+const HeatFlowChart = lazy(() => import('../components/HeatFlowChart'));
+const Shelter3DViewer = lazy(() => import('../components/Shelter3DViewer'));
+const ValidationChart = lazy(() => import('../components/ValidationChart'));
 
 const TABS_BASE = ['3D Model & ANSYS', 'Temperature', 'Solar Gain', 'Heat Flow', 'Recommendation'];
 const TABS_COMPARE = ['3D Model & ANSYS', 'Temperature', 'Solar Gain', 'Heat Flow', 'Comparison', 'Recommendation'];
@@ -117,10 +120,24 @@ export default function ResultsPage() {
   const [activeTab, setActiveTab] = useState('3D Model & ANSYS');
   const [active3DVariant, setActive3DVariant] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [budgetTargetTemp, setBudgetTargetTemp] = useState(15);
+  const [budgetLimit, setBudgetLimit] = useState(500000);
+  const [budgetResult, setBudgetResult] = useState(null);
+  const [budgetError, setBudgetError] = useState('');
+  const [isBudgetLoading, setIsBudgetLoading] = useState(false);
+  const [sensorCsv, setSensorCsv] = useState(null);
+  const [validationResult, setValidationResult] = useState(null);
+  const [validationError, setValidationError] = useState('');
+  const [isValidationLoading, setIsValidationLoading] = useState(false);
 
   if (!state) return null;
 
   const { result, compareResult, input, isCompare } = state;
+  const pipelineResult = state.pipelineResult || state.pipeline_result ||
+    (Array.isArray(state.result?.top_10_candidates) ? state.result : null) ||
+    (Array.isArray(state.top_10_candidates) ? state : null);
+  const pipelineCandidates = pipelineResult?.top_10_candidates || [];
+  const pipelineRecommendation = pipelineResult?.recommendation_summary;
   const tabs = isCompare ? TABS_COMPARE : TABS_BASE;
 
   const single = extract(result);
@@ -141,6 +158,62 @@ export default function ResultsPage() {
   ];
 
   const activePrimary = isCompare && optimalVariant ? extract(optimalVariant) : single;
+
+  const handleBudgetOptimize = async () => {
+    setIsBudgetLoading(true);
+    setBudgetError('');
+    setBudgetResult(null);
+    try {
+      const requestInput = input || {};
+      const response = await runBudgetOptimizer({
+        target_min_temp_c: Number(budgetTargetTemp),
+        max_budget_inr: Number(budgetLimit),
+        shelter_config: {
+          length_m: requestInput.length_m ?? requestInput.length ?? null,
+          width_m: requestInput.width_m ?? requestInput.width ?? null,
+          height_m: requestInput.height_m ?? requestInput.height ?? null,
+          required_occupancy: requestInput.required_occupancy ?? requestInput.target_occupancy ?? 4,
+          climate_profile_id: requestInput.climate_profile_id || 'ladakh_winter',
+          min_ambient_temp_c: requestInput.min_ambient_temp_c ?? requestInput.min_ambient_temp_C ?? null,
+          max_ambient_temp_c: requestInput.max_ambient_temp_c ?? requestInput.max_ambient_temp_C ?? null,
+          peak_solar_radiation_w_m2: requestInput.peak_solar_radiation_w_m2 ?? requestInput.peak_solar_radiation_W_m2 ?? null,
+          use_live_climate: requestInput.use_live_climate ?? requestInput.climate_profile_id === 'nasa_live',
+          run_ansys_detailed: false,
+        },
+      });
+      setBudgetResult(response);
+    } catch (error) {
+      const detail = error?.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        setBudgetError(detail.map((item) =>
+          `${(item.loc || []).slice(1).join('.')}: ${item.msg}`
+        ).join('\n'));
+      } else {
+        setBudgetError(typeof detail === 'string' ? detail : (error?.message || 'Budget optimization failed.'));
+      }
+    } finally {
+      setIsBudgetLoading(false);
+    }
+  };
+
+  const handleValidateModel = async () => {
+    if (!sensorCsv) {
+      setValidationError('Choose a CSV file with 24 hourly measurements first.');
+      return;
+    }
+    setIsValidationLoading(true);
+    setValidationError('');
+    setValidationResult(null);
+    try {
+      const response = await validateModel(input || {}, sensorCsv);
+      setValidationResult(response);
+    } catch (error) {
+      const detail = error?.response?.data?.detail;
+      setValidationError(typeof detail === 'string' ? detail : (error?.message || 'Model validation failed.'));
+    } finally {
+      setIsValidationLoading(false);
+    }
+  };
 
   const variantSeries = isCompare
     ? compareList.map((v, i) => ({
@@ -199,13 +272,16 @@ export default function ResultsPage() {
       // Title block
       pdf.setFontSize(17);
       pdf.setTextColor(15, 23, 42);
-      pdf.text('THERMA-LADAKH — Thermal Simulation Report', pageW / 2, y, { align: 'center' });
-      y += 8;
+      pdf.setDrawColor(27, 94, 123);
+      pdf.setLineWidth(0.6);
+      pdf.line(marginX, 7, pageW - marginX, 7);
+      pdf.text('THERMA-LADAKH | SIH26051', pageW / 2, y, { align: 'center' });
+      y += 7;
       pdf.setFontSize(9);
       pdf.setTextColor(100, 116, 139);
-      pdf.text(`Climate: ${climateName}   |   Azimuth: ${dirLabel}   |   Duration: ${input?.duration_hours || 24}h`, pageW / 2, y, { align: 'center' });
+      pdf.text('Passive Thermal Shelter Optimization Report', pageW / 2, y, { align: 'center' });
       y += 5;
-      pdf.text(`Generated: ${new Date().toLocaleString()}`, pageW / 2, y, { align: 'center' });
+      pdf.text(`Generated: ${new Date().toLocaleDateString()}`, pageW / 2, y, { align: 'center' });
       y += 12;
 
       const engineLabel = (result?.engine_used || compareList?.[0]?.engine_used || 'python_fdm')
@@ -298,6 +374,196 @@ export default function ResultsPage() {
     }
   };
 
+  const handleExportResearchPDF = async () => {
+    setIsExporting(true);
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageW = pdf.internal.pageSize.getWidth();
+      const marginX = 14;
+      const resultData = isCompare && optimalVariant ? optimalVariant : (result || {});
+      const reportInput = resultData.input_config || input || {};
+      const reportSeries = {
+        ambient: resultData.ambient_temperature_series || [],
+        solarIrradiance: resultData.solar_irradiance_series || [],
+        indoor: resultData.inside_temperature_series || [],
+        solarGain: resultData.solar_gain_series || [],
+      };
+      const seriesAtHour = (series, hour) => {
+        const point = series.find((item) => Math.abs(Number(item.hour) - hour) < 1e-6);
+        return point?.value == null ? null : Number(point.value);
+      };
+      const heatLossAtHour = (hour) => {
+        if (!Array.isArray(resultData.heat_flow_series) || resultData.heat_flow_series.length === 0) return null;
+        return resultData.heat_flow_series.reduce((total, component) => {
+          const point = component.heat_flow_series?.find((item) => Math.abs(Number(item.hour) - hour) < 1e-6);
+          return total + (point?.value == null ? 0 : Math.max(0, -Number(point.value)));
+        }, 0);
+      };
+      const fmt = (value, digits = 2) => (
+        value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toFixed(digits)
+      );
+      let y = 18;
+
+      const ensureSpace = (needed) => {
+        if (y + needed > 278) {
+          pdf.addPage();
+          y = 18;
+        }
+      };
+      const sectionHeader = (text) => {
+        ensureSpace(12);
+        pdf.setFontSize(12);
+        pdf.setTextColor(2, 132, 199);
+        pdf.text(text, marginX, y);
+        y += 3;
+        pdf.setDrawColor(203, 213, 225);
+        pdf.line(marginX, y, pageW - marginX, y);
+        y += 6;
+      };
+      const wrappedParagraph = (text) => {
+        const lines = pdf.splitTextToSize(text, pageW - 2 * marginX);
+        lines.forEach((line) => {
+          ensureSpace(6);
+          pdf.setFontSize(9);
+          pdf.setTextColor(51, 65, 85);
+          pdf.text(line, marginX, y);
+          y += 4.5;
+        });
+        y += 2;
+      };
+      const drawCell = (text, x, width, align = 'left') => {
+        const lines = pdf.splitTextToSize(String(text), width - 2);
+        pdf.text(lines[0] || '', x + (align === 'right' ? width - 2 : 1), y, {
+          align,
+          maxWidth: width - 2,
+        });
+      };
+      const addFooter = () => {
+        const pageCount = pdf.getNumberOfPages();
+        for (let page = 1; page <= pageCount; page += 1) {
+          pdf.setPage(page);
+          pdf.setFontSize(7);
+          pdf.setTextColor(100, 116, 139);
+          pdf.text(
+            'Generated by THERMA-LADAKH | SIH26051 | For research use - not certified for structural design',
+            pageW / 2,
+            289,
+            { align: 'center', maxWidth: pageW - 2 * marginX },
+          );
+        }
+      };
+
+      pdf.setFontSize(17);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text('THERMA-LADAKH | Research Methodology Report', pageW / 2, y, { align: 'center' });
+      y += 9;
+      pdf.setFontSize(9);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`Generated: ${new Date().toISOString()}`, pageW / 2, y, { align: 'center' });
+      y += 11;
+
+      sectionHeader('Section 1: Simulation Parameters');
+      const parameterEntries = Object.entries(reportInput);
+      if (parameterEntries.length === 0) parameterEntries.push(['Parameters', 'Not available']);
+      parameterEntries.forEach(([key, value]) => {
+        const text = value == null
+          ? '—'
+          : typeof value === 'object' ? JSON.stringify(value) : String(value);
+        const wrapped = pdf.splitTextToSize(text, pageW - 2 * marginX - 72);
+        wrapped.forEach((line, index) => {
+          ensureSpace(6);
+          pdf.setFontSize(8);
+          pdf.setTextColor(71, 85, 105);
+          if (index === 0) pdf.text(String(key), marginX, y, { maxWidth: 68 });
+          pdf.setTextColor(15, 23, 42);
+          pdf.text(line, marginX + 70, y);
+          y += 4.5;
+        });
+      });
+
+      sectionHeader('Section 2: Physics Methodology');
+      wrappedParagraph(
+        'Thermal simulation uses a lumped-capacitance finite difference method over a 24-hour period. Hourly values in this report are sampled from solver output; the Python FDM internally integrates at 30-second steps.',
+      );
+      wrappedParagraph(
+        'Solar gain is computed using orientation-weighted irradiance multipliers at the climate profile latitude (default Ladakh latitude 34°N). The implementation computes solar position but does not identify a separate empirical calibration dataset.',
+      );
+      wrappedParagraph(
+        'Material thermal properties are stored in the project material database. The requested references are the ASHRAE Handbook of Fundamentals and IS 3792 (Indian Standard for heat insulation); the current dataset does not record per-material citations, so this provenance should be verified before publication.',
+      );
+
+      sectionHeader('Section 3: Hourly Results');
+      const columns = [
+        { label: 'Hour', width: 14 },
+        { label: 'Ambient °C', width: 25 },
+        { label: 'Solar W/m²', width: 25 },
+        { label: 'Indoor °C', width: 24 },
+        { label: 'Loss W', width: 24 },
+        { label: 'Gain W', width: 24 },
+        { label: 'Net W', width: 24 },
+      ];
+      const tableX = marginX;
+      const tableWidth = columns.reduce((total, column) => total + column.width, 0);
+      const drawTableHeader = () => {
+        ensureSpace(9);
+        pdf.setFillColor(15, 23, 42);
+        pdf.rect(tableX, y - 4, tableWidth, 7, 'F');
+        pdf.setFontSize(7);
+        pdf.setTextColor(255, 255, 255);
+        let x = tableX;
+        columns.forEach((column) => {
+          pdf.text(column.label, x + 1, y, { maxWidth: column.width - 2 });
+          x += column.width;
+        });
+        y += 5;
+      };
+      drawTableHeader();
+      for (let hour = 0; hour < 24; hour += 1) {
+        ensureSpace(6);
+        if (y === 18) drawTableHeader();
+        if (hour % 2 === 0) {
+          pdf.setFillColor(241, 245, 249);
+          pdf.rect(tableX, y - 3.5, tableWidth, 5, 'F');
+        }
+        const loss = heatLossAtHour(hour);
+        const gain = seriesAtHour(reportSeries.solarGain, hour);
+        const values = [
+          String(hour).padStart(2, '0'),
+          fmt(seriesAtHour(reportSeries.ambient, hour)),
+          fmt(seriesAtHour(reportSeries.solarIrradiance, hour), 1),
+          fmt(seriesAtHour(reportSeries.indoor, hour)),
+          fmt(loss, 1),
+          fmt(gain, 1),
+          fmt(loss == null || gain == null ? null : gain - loss, 1),
+        ];
+        let x = tableX;
+        pdf.setFontSize(7);
+        pdf.setTextColor(15, 23, 42);
+        values.forEach((value, index) => {
+          drawCell(value, x, columns[index].width);
+          x += columns[index].width;
+        });
+        y += 5;
+      }
+
+      sectionHeader('Section 4: Validation Status');
+      if (validationResult) {
+        const validationLine = `RMSE: ${fmt(validationResult.rmse, 4)} °C | MAE: ${fmt(validationResult.mae, 4)} °C | R²: ${fmt(validationResult.r_squared, 4)}`;
+        wrappedParagraph(validationLine);
+      } else {
+        wrappedParagraph('Not validated against sensor data');
+      }
+
+      addFooter();
+      pdf.save('THERMA_LADAKH_Research_Report.pdf');
+    } catch (e) {
+      console.error('Research PDF export failed:', e);
+      alert(`Research PDF export failed: ${e?.message || e}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Results Header Card */}
@@ -331,6 +597,13 @@ export default function ResultsPage() {
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
               </svg>
               <span>{isExporting ? 'Generating PDF…' : 'Export PDF Report'}</span>
+            </button>
+            <button
+              onClick={handleExportResearchPDF}
+              disabled={isExporting}
+              className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white border border-sky-600 rounded-lg text-xs font-mono font-bold transition-all shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isExporting ? 'Generating PDF…' : 'Export Research Report (PDF)'}
             </button>
           </div>
         </div>
@@ -517,6 +790,240 @@ export default function ResultsPage() {
         </div>
       </div>
 
+      {pipelineRecommendation && (
+        <RecommendationCard recommendationSummary={pipelineRecommendation} bestLabel="Top-Ranked Shelter Design" />
+      )}
+
+      {pipelineCandidates.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-800">
+              Ranked Shelter Candidates
+            </h2>
+            <span className="text-xs font-mono text-slate-500">{pipelineCandidates.length} designs</span>
+          </div>
+          <div className="grid gap-3">
+            {pipelineCandidates.map((candidate) => {
+              const metrics = candidate.screening_results || {};
+              const design = candidate.design || {};
+              const wallMaterial = design.wall_system?.outer_layer?.material_id || '—';
+              const comfortHours = metrics.comfort_hours_count ?? metrics.comfort_hours ?? '—';
+              const comfortPercent = metrics.comfort_hours_pct ?? metrics.comfort_percentage;
+              return (
+                <article key={candidate.candidate_id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-semibold text-slate-900">
+                      #{candidate.rank} · {design.variant_label || candidate.candidate_id}
+                    </h3>
+                    <span className="text-xs font-mono text-slate-600">Score {candidate.score}</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    <Chip label={`Wall: ${wallMaterial}`} />
+                    <Chip label={`Comfort: ${comfortHours} h${comfortPercent != null ? ` (${comfortPercent}%)` : ''}`} />
+                    <Chip label={`Min indoor: ${metrics.min_indoor_temperature_c ?? '—'}°C`} />
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <details className="group rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 sm:px-6">
+          <div>
+            <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-800">Budget Optimizer</h2>
+            <p className="mt-1 text-xs text-slate-500">Find lower-cost material combinations that meet your minimum temperature target.</p>
+          </div>
+          <span className="text-xs font-mono font-bold text-sky-700 group-open:rotate-180">▼</span>
+        </summary>
+        <div className="space-y-5 border-t border-slate-100 p-5 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-700">
+              <span className="flex items-center justify-between">
+                <span>Target minimum indoor temperature</span>
+                <span className="text-sky-700">{budgetTargetTemp}°C</span>
+              </span>
+              <input
+                type="range"
+                min="10"
+                max="20"
+                step="0.5"
+                value={budgetTargetTemp}
+                onChange={(event) => setBudgetTargetTemp(Number(event.target.value))}
+                disabled={isBudgetLoading}
+                className="w-full accent-sky-600"
+              />
+              <span className="flex justify-between text-[10px] font-normal text-slate-400">
+                <span>10°C</span><span>20°C</span>
+              </span>
+            </label>
+            <label className="space-y-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-700">
+              Maximum budget (INR)
+              <input
+                type="number"
+                min="0"
+                step="10000"
+                value={budgetLimit}
+                onChange={(event) => setBudgetLimit(event.target.value)}
+                disabled={isBudgetLoading}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            onClick={handleBudgetOptimize}
+            disabled={isBudgetLoading || budgetLimit === '' || !Number.isFinite(Number(budgetLimit)) || Number(budgetLimit) < 0}
+            className="rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-mono font-bold text-sky-400 shadow-sm transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isBudgetLoading ? 'Searching material combinations…' : 'Find Cheapest Design'}
+          </button>
+
+          {isBudgetLoading && (
+            <p role="status" className="text-xs font-mono text-slate-500">Screening candidate designs and estimating material costs…</p>
+          )}
+          {budgetError && (
+            <p role="alert" className="whitespace-pre-line rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{budgetError}</p>
+          )}
+          {budgetResult && (
+            <div className="space-y-3">
+              <div className={`rounded-lg border px-3 py-2 text-xs font-mono ${
+                budgetResult.feasible
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-amber-200 bg-amber-50 text-amber-800'
+              }`}>
+                {budgetResult.feasible
+                  ? `Budget target is feasible. Lowest qualifying estimate: ₹${Number(budgetResult.cheapest_cost_inr).toLocaleString('en-IN')}.`
+                  : budgetResult.gap_if_infeasible}
+              </div>
+              {budgetResult.cheapest_designs?.length > 0 ? (
+                <div className="grid gap-3 lg:grid-cols-3">
+                  {budgetResult.cheapest_designs.map((candidate) => {
+                    const design = candidate.design || {};
+                    const wall = design.wall_system || {};
+                    const layers = [
+                      wall.outer_layer && `${wall.outer_layer.material_id} ${Math.round(wall.outer_layer.thickness_m * 100)}cm`,
+                      wall.insulation_layer && `${wall.insulation_layer.material_id} ${Math.round(wall.insulation_layer.thickness_m * 100)}cm`,
+                      wall.inner_layer && `${wall.inner_layer.material_id} ${Math.round(wall.inner_layer.thickness_m * 100)}cm`,
+                    ].filter(Boolean);
+                    const metrics = candidate.screening_results || {};
+                    return (
+                      <article key={candidate.candidate_id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-xs font-bold text-slate-900">{design.variant_label || `Design ${candidate.rank}`}</h3>
+                          <span className="shrink-0 rounded bg-sky-100 px-2 py-0.5 text-[10px] font-mono font-bold text-sky-800">#{candidate.rank}</span>
+                        </div>
+                        <p className="mt-2 text-[11px] text-slate-600">
+                          Wall: {layers.join(' + ') || '—'}<br />
+                          Roof: {design.roof?.material_id || '—'} · Floor: {design.floor_material_id || '—'}
+                        </p>
+                        <div className="mt-3 space-y-1 border-t border-slate-200 pt-2 text-xs font-mono">
+                          <div className="flex justify-between gap-2">
+                            <span className="text-slate-500">Estimated cost</span>
+                            <strong className="text-slate-900">₹{Number(candidate.estimated_cost_inr || 0).toLocaleString('en-IN')}</strong>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <span className="text-slate-500">Minimum indoor</span>
+                            <strong className="text-sky-700">{Number(metrics.min_indoor_temperature_c).toFixed(1)}°C</strong>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <span className="text-slate-500">Comfort hours</span>
+                            <strong className="text-emerald-700">{metrics.comfort_hours_count ?? metrics.comfort_hours ?? '—'} h</strong>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">No candidate designs were returned for this temperature target.</p>
+              )}
+            </div>
+          )}
+        </div>
+      </details>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-4">
+          <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-800">
+            Validate Against Real Data
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Upload one day of sensor readings to compare measured temperatures with the FDM simulation.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="flex-1 space-y-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-700">
+            Sensor temperature CSV
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => {
+                setSensorCsv(event.target.files?.[0] || null);
+                setValidationResult(null);
+                setValidationError('');
+              }}
+              disabled={isValidationLoading}
+              className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-normal normal-case tracking-normal text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-slate-700"
+            />
+            <span className="block text-[10px] font-normal normal-case tracking-normal text-slate-400">
+              Required columns: hour (0–23), measured_temp_c
+            </span>
+          </label>
+          <button
+            type="button"
+            onClick={handleValidateModel}
+            disabled={isValidationLoading || !sensorCsv}
+            className="rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-mono font-bold text-sky-400 shadow-sm transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isValidationLoading ? 'Validating…' : 'Validate Model'}
+          </button>
+        </div>
+        {validationError && (
+          <p role="alert" className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            {validationError}
+          </p>
+        )}
+        {validationResult && (
+          <div className="mt-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className={`rounded-full border px-3 py-1 text-xs font-mono font-bold ${
+                validationResult.validation_grade === 'Excellent'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : validationResult.validation_grade === 'Good'
+                    ? 'border-yellow-200 bg-yellow-50 text-yellow-800'
+                    : validationResult.validation_grade === 'Acceptable'
+                      ? 'border-orange-200 bg-orange-50 text-orange-800'
+                      : 'border-rose-200 bg-rose-50 text-rose-800'
+              }`}>
+                {validationResult.validation_grade} validation
+              </span>
+              <span className="text-xs font-mono text-slate-500">
+                Max deviation: {Number(validationResult.max_deviation_c).toFixed(2)}°C at hour {validationResult.max_deviation_hour}:00
+              </span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                ['RMSE', validationResult.rmse, '°C'],
+                ['MAE', validationResult.mae, '°C'],
+                ['R²', validationResult.r_squared, ''],
+              ].map(([label, value, unit]) => (
+                <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">{label}</span>
+                  <p className="mt-1 text-xl font-bold font-mono text-slate-900">
+                    {Number(value).toFixed(3)}{unit}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <Suspense fallback={<div className="h-[320px] w-full animate-pulse rounded-xl bg-slate-100" />}>
+              <ValidationChart data={validationResult.hourly_comparison || []} />
+            </Suspense>
+          </div>
+        )}
+      </section>
+
       {/* Cost & Feasibility Card */}
       {(() => {
         const ce = result?.cost_estimate || optimalVariant?.cost_estimate;
@@ -595,11 +1102,13 @@ export default function ResultsPage() {
                   </button>
                 )}
               </div>
-              <Shelter3DViewer
-                shelterData={currentInput}
-                ansysData={currentResult}
-                height="480px"
-              />
+              <Suspense fallback={<div className="h-[480px] w-full animate-pulse rounded-xl bg-slate-100" />}>
+                <Shelter3DViewer
+                  shelterData={currentInput}
+                  ansysData={currentResult}
+                  height="480px"
+                />
+              </Suspense>
             </div>
           );
         })()}
@@ -612,11 +1121,13 @@ export default function ResultsPage() {
               </h2>
               <span className="text-xs font-mono text-slate-500">Threshold: +15.0°C</span>
             </div>
-            <TemperatureChart
-              insideSeriesData={activePrimary.insideTemp || []}
-              ambientSeriesData={activePrimary.ambientTemp || []}
-              variantSeries={variantSeries}
-            />
+            <Suspense fallback={<div className="h-[360px] w-full animate-pulse rounded-xl bg-slate-100" />}>
+              <TemperatureChart
+                insideSeriesData={activePrimary.insideTemp || []}
+                ambientSeriesData={activePrimary.ambientTemp || []}
+                variantSeries={variantSeries}
+              />
+            </Suspense>
           </div>
         )}
 
@@ -628,10 +1139,12 @@ export default function ResultsPage() {
               </h2>
               <span className="text-xs font-mono text-slate-500">South Facade Capture</span>
             </div>
-            <SolarGainChart
-              solarGainSeries={activePrimary.solarGain || []}
-              totalKwh={activePrimary.totalKwh}
-            />
+            <Suspense fallback={<div className="h-[360px] w-full animate-pulse rounded-xl bg-slate-100" />}>
+              <SolarGainChart
+                solarGainSeries={activePrimary.solarGain || []}
+                totalKwh={activePrimary.totalKwh}
+              />
+            </Suspense>
           </div>
         )}
 
@@ -643,7 +1156,9 @@ export default function ResultsPage() {
               </h2>
               <span className="text-xs font-mono text-slate-500">Walls · Roof · Plinth · Fenestration</span>
             </div>
-            <HeatFlowChart heatFlowSeries={activePrimary.heatFlow || []} />
+            <Suspense fallback={<div className="h-[360px] w-full animate-pulse rounded-xl bg-slate-100" />}>
+              <HeatFlowChart heatFlowSeries={activePrimary.heatFlow || []} />
+            </Suspense>
           </div>
         )}
 
@@ -689,6 +1204,7 @@ export default function ResultsPage() {
               recommendationText={recText}
               reasons={recReasons}
               bestLabel={isCompare ? bestLabel : (input?.variant_label || 'Base Design')}
+              recommendationSummary={pipelineRecommendation}
             />
           </div>
         )}

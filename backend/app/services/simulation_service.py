@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional, List
 
@@ -164,6 +165,22 @@ class SimulationService:
             raw['job_id'] = job_id
             raw['engine_used'] = raw.get('engine_used', 'python_fdm')
             raw['variant_label'] = shelter_input.variant_label or 'Design 1'
+            raw['methodology'] = 'Lumped-capacitance FDM'
+            raw['timestep_hours'] = 1
+            raw['simulation_hours'] = int(shelter_input.duration_hours)
+            raw['solver'] = (
+                'ANSYS MAPDL'
+                if raw['engine_used'] == 'ansys_thermal_fea'
+                else 'Python FDM'
+            )
+            raw['generated_at'] = datetime.now(timezone.utc).isoformat()
+            raw['solar_irradiance_series'] = [
+                {
+                    'hour': float(hour['hour']),
+                    'value': float(hour['solar_irradiance_W_m2']),
+                }
+                for hour in climate_profile.get('hourly_data', [])
+            ]
             self.jobs[job_id].update(raw)
 
             # Persist to TiDB Cloud MySQL
@@ -205,6 +222,22 @@ class SimulationService:
                 raw['status'] = 'complete'
                 raw['engine_used'] = raw.get('engine_used', 'python_fdm')
                 raw['variant_label'] = variant.variant_label
+                raw['methodology'] = 'Lumped-capacitance FDM'
+                raw['timestep_hours'] = 1
+                raw['simulation_hours'] = int(variant.duration_hours)
+                raw['solver'] = (
+                    'ANSYS MAPDL'
+                    if raw['engine_used'] == 'ansys_thermal_fea'
+                    else 'Python FDM'
+                )
+                raw['generated_at'] = datetime.now(timezone.utc).isoformat()
+                raw['solar_irradiance_series'] = [
+                    {
+                        'hour': float(hour['hour']),
+                        'value': float(hour['solar_irradiance_W_m2']),
+                    }
+                    for hour in climate_profile.get('hourly_data', [])
+                ]
                 raw['input_config'] = {
                     'variant_label': variant.variant_label,
                     'length_m': getattr(variant, 'length_m', 6.0),

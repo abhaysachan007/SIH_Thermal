@@ -90,12 +90,23 @@ def load_climate_timeseries(
     profile_id: str = "ladakh_winter",
     min_amb: Optional[float] = None,
     max_amb: Optional[float] = None,
-    peak_solar: Optional[float] = None
+    peak_solar: Optional[float] = None,
+    use_live: bool = False,
+    lat: float = 34.15,
+    lon: float = 77.57
 ) -> ClimateTimeSeries:
-    with open(DATA_PATH, encoding="utf-8-sig") as f:
-        profiles = json.load(f)
+    if use_live:
+        from app.services.nasa_climate import fetch_nasa_climate
 
-    prof = profiles.get(profile_id, list(profiles.values())[0])
+        prof, note = fetch_nasa_climate(latitude=lat, longitude=lon)
+        if prof is None:
+            raise ValueError(note)
+    else:
+        with open(DATA_PATH, encoding="utf-8-sig") as f:
+            profiles = json.load(f)
+
+        prof = profiles.get(profile_id, list(profiles.values())[0])
+
     raw_hourly = prof.get("hourly_data", [])
 
     orig_temps = [h["ambient_temp_C"] for h in raw_hourly]

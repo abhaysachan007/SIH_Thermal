@@ -1,5 +1,5 @@
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ReferenceLine, ResponsiveContainer,
 } from 'recharts';
 
@@ -29,6 +29,7 @@ function buildChartData(insideSeriesData = [], ambientSeriesData = [], variantSe
     const row = {
       hour: h,
       inside: inVal,
+      insideBand: inVal == null ? null : [inVal - 2, inVal + 2],
       ambient: ambVal,
       delta_t: deltaT,
     };
@@ -109,6 +110,16 @@ export default function TemperatureChart({
             unit="°C"
           />
           <Tooltip content={<CustomTooltip />} />
+          <Area
+            type="monotone"
+            dataKey="insideBand"
+            name="Indoor uncertainty ±2°C"
+            stroke="none"
+            fill="#38BDF8"
+            fillOpacity={0.2}
+            legendType="none"
+            isAnimationActive={false}
+          />
           <Legend
             verticalAlign="top"
             wrapperStyle={{ paddingBottom: '12px', fontSize: '11px', fontFamily: 'monospace' }}

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 function deriveInsights(reasons = []) {
   const insights = [];
   reasons.forEach((r) => {
@@ -22,7 +24,13 @@ function deriveInsights(reasons = []) {
   return [...new Set(insights)].slice(0, 3);
 }
 
-export default function RecommendationCard({ recommendationText, reasons = [], bestLabel }) {
+export default function RecommendationCard({
+  recommendationText,
+  reasons = [],
+  bestLabel,
+  recommendationSummary,
+}) {
+  const [showWhy, setShowWhy] = useState(false);
   const insights = deriveInsights(reasons);
 
   return (
@@ -45,6 +53,39 @@ export default function RecommendationCard({ recommendationText, reasons = [], b
 
       {/* Body */}
       <div className="p-6 space-y-6">
+        {recommendationSummary && (
+          <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-4 space-y-3">
+            <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-sky-950">
+              Best Candidate Design
+            </h4>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-sm text-slate-800">
+              <div><span className="text-slate-500">Wall material:</span> {recommendationSummary.wall_material}</div>
+              <div><span className="text-slate-500">Roof material:</span> {recommendationSummary.roof_material}</div>
+              <div><span className="text-slate-500">Orientation:</span> {recommendationSummary.orientation}</div>
+              <div><span className="text-slate-500">Comfort hours:</span> {recommendationSummary.comfort_hours} h</div>
+              <div><span className="text-slate-500">Minimum indoor:</span> {Number(recommendationSummary.min_indoor_temp_c).toFixed(1)}°C</div>
+            </div>
+            <p className="text-sm text-slate-700 leading-relaxed">{recommendationSummary.reason}</p>
+            <div className="border-t border-sky-200 pt-3">
+              <button
+                type="button"
+                onClick={() => setShowWhy((shown) => !shown)}
+                aria-expanded={showWhy}
+                className="text-sm font-semibold text-sky-800 hover:text-sky-950"
+              >
+                {showWhy ? 'Hide' : 'Why this design?'}
+              </button>
+              {showWhy && (
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                  <li>{recommendationSummary.wall_material} walls retain heat longer due to high thermal mass.</li>
+                  <li>{recommendationSummary.orientation}-facing glazing maximizes winter solar capture.</li>
+                  <li>This configuration provides {recommendationSummary.comfort_hours} hours of comfortable indoor temperature per day.</li>
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+
         {recommendationText && (
           <p className="text-sm text-slate-700 leading-relaxed font-sans">
             {recommendationText}

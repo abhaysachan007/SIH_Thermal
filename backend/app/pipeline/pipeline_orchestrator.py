@@ -19,7 +19,7 @@ from app.pipeline.climate_repo import load_climate_timeseries
 from app.pipeline.candidate_generator import generate_candidate_shelters
 from app.pipeline.geometry_validator import GeometryValidator
 from app.pipeline.thermal_screening import ThermalScreeningEngine
-from app.pipeline.ranking_engine import score_candidate
+from app.pipeline.ranking_engine import score_candidate, build_recommendation_summary
 from app.pipeline.diversity_selector import select_diverse_top_10
 from app.pipeline.ansys_adapter import build_ansys_contract_payload, run_ansys_evaluation
 
@@ -45,7 +45,8 @@ def run_candidate_pipeline(
         profile_id=req.climate_profile_id,
         min_amb=req.min_ambient_temp_c,
         max_amb=req.max_ambient_temp_c,
-        peak_solar=req.peak_solar_radiation_w_m2
+        peak_solar=req.peak_solar_radiation_w_m2,
+        use_live=req.use_live_climate
     )
 
     # 2. Generate Candidate Shelters from Design Space
@@ -122,6 +123,7 @@ def run_candidate_pipeline(
         screened_candidates=len(scored_results),
         top_10_candidates=top_10,
         rejection_summary=rejection_summary,
+        recommendation_summary=build_recommendation_summary(top_10[0]) if top_10 else None,
         simulation_mode=f"FAST_PHYSICS + ANSYS_ADAPTER ({sim_mode_detected})",
         explainability_log=explainability_log[:100]  # sample of logs
     )

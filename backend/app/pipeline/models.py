@@ -107,6 +107,8 @@ class ThermalMetrics(BaseModel):
     average_indoor_temperature_c: float
     comfort_hours: float
     comfort_percentage: float
+    comfort_hours_count: int
+    comfort_hours_pct: float
     wall_conductive_loss_kwh: float
     roof_conductive_loss_kwh: float
     floor_conductive_loss_kwh: float
@@ -128,6 +130,7 @@ class CandidateRankingResult(BaseModel):
     design: CandidateShelter
     screening_results: ThermalMetrics
     score: float
+    estimated_cost_inr: Optional[float] = None
     score_breakdown: Dict[str, float] = {}
     explainability_notes: List[str] = []
     diversity_category: Optional[str] = None
@@ -194,6 +197,7 @@ class UserDesignRequest(BaseModel):
     min_ambient_temp_c: Optional[float] = None
     max_ambient_temp_c: Optional[float] = None
     peak_solar_radiation_w_m2: Optional[float] = None
+    use_live_climate: bool = False
     custom_design_space: Optional[Dict[str, Any]] = None
     comfort_weight: float = 0.50
     energy_weight: float = 0.30
@@ -209,5 +213,6 @@ class PipelineOutput(BaseModel):
     screened_candidates: int
     top_10_candidates: List[CandidateRankingResult]
     rejection_summary: Dict[str, int] = {}
+    recommendation_summary: Optional[Dict[str, Any]] = None
     simulation_mode: str = "FAST_PHYSICS + ANSYS_ADAPTER"
     explainability_log: List[Dict[str, Any]] = []

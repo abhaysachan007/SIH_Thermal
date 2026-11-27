@@ -17,6 +17,11 @@ COMFORT_TEMP_MAX_C = 25.0
 AIR_DENSITY_HIGH_ALT = 0.85 # kg/m^3 at 3500m altitude
 AIR_SPECIFIC_HEAT = 1005.0  # J/(kg*K)
 GROUND_TEMP_C = 4.0         # Deep soil temperature in winter
+ORIENTATION_SOLAR_FACTOR = {
+    "north": 0.10, "south": 1.00, "east": 0.60,
+    "west": 0.60, "northeast": 0.35, "northwest": 0.35,
+    "southeast": 0.85, "southwest": 0.85,
+}
 
 
 class ThermalScreeningEngine:
@@ -64,7 +69,9 @@ class ThermalScreeningEngine:
                 u_win = self.mat_repo.calculate_opening_u_value(op.glass_material_id, "window")
                 shgc_win = self.mat_repo.calculate_opening_shgc(op.glass_material_id)
                 win_u_area_sum += u_win * op.area_m2
-                win_shgc_area_sum += shgc_win * op.area_m2
+                orientation = op.wall.lower()
+                solar_factor = ORIENTATION_SOLAR_FACTOR.get(orientation, 0.5)
+                win_shgc_area_sum += shgc_win * op.area_m2 * solar_factor
             elif op.type == "door":
                 A_door += op.area_m2
                 u_door = self.mat_repo.calculate_opening_u_value(op.glass_material_id, "door")
@@ -117,7 +124,6 @@ class ThermalScreeningEngine:
                 i_solar = clim["solar_irradiance_w_m2"]
                 h_float = (t_sec / 3600.0) % 24.0
 
-                # Solar aperture on south window
                 f_south = climate.surface_solar_factor(candidate.orientation_deg, 90.0, h_float)
                 q_solar_win = win_shgc_area_sum * i_solar * f_south
 
@@ -209,6 +215,8 @@ class ThermalScreeningEngine:
             average_indoor_temperature_c=round(avg_t, 2),
             comfort_hours=float(comfort_hrs),
             comfort_percentage=comfort_pct,
+            comfort_hours_count=comfort_hrs,
+            comfort_hours_pct=comfort_pct,
             wall_conductive_loss_kwh=round(total_wall_loss_J * J_TO_KWH, 3),
             roof_conductive_loss_kwh=round(total_roof_loss_J * J_TO_KWH, 3),
             floor_conductive_loss_kwh=round(total_floor_loss_J * J_TO_KWH, 3),

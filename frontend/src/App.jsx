@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import InputPage from './pages/InputPage';
 import ResultsPage from './pages/ResultsPage';
+import { fetchLiveClimate } from './api/simulationApi';
 
 function NavigationHeader() {
   const location = useLocation();
@@ -64,10 +66,59 @@ function NavigationHeader() {
 }
 
 export default function App() {
+  const [liveClimate, setLiveClimate] = useState(null);
+  const [isClimateLoading, setIsClimateLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const updateOnlineStatus = () => setIsOffline(!navigator.onLine);
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+
+    fetchLiveClimate()
+      .then((climate) => setLiveClimate(climate?.ok ? climate : null))
+      .catch(() => setLiveClimate(null))
+      .finally(() => setIsClimateLoading(false));
+
+    return () => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+    };
+  }, []);
+
+  const sourceMonth = Number(liveClimate?.source_date?.slice(4, 6));
+  const season = liveClimate?.season || (
+    sourceMonth <= 2 || sourceMonth === 12 ? 'winter'
+      : sourceMonth <= 5 ? 'spring'
+        : sourceMonth <= 8 ? 'summer'
+          : sourceMonth <= 11 ? 'autumn'
+            : 'winter'
+  );
+
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col bg-slate-50">
         <NavigationHeader />
+
+        {isOffline && (
+          <div
+            role="status"
+            className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-center text-xs font-mono font-semibold text-amber-900"
+          >
+            ⚠ Offline — using cached climate data
+          </div>
+        )}
+
+        {(isClimateLoading || liveClimate) && (
+          <div
+            className="bg-slate-900 px-4 py-2 text-center text-xs font-mono text-slate-200"
+            title={liveClimate?.source_date ? `NASA POWER sample date: ${liveClimate.source_date}` : undefined}
+          >
+            {isClimateLoading
+              ? 'Fetching Leh conditions...'
+              : `Leh now: ${liveClimate.max_temp_C ?? liveClimate.min_temp_C}°C · Solar: ${liveClimate.peak_solar_W_m2} W/m² · ${season}`}
+          </div>
+        )}
 
         {/* Main Viewport Container */}
         <main className="flex-1 py-8 px-4 sm:px-6 max-w-7xl mx-auto w-full">

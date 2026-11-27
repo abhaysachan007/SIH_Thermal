@@ -7,16 +7,19 @@ import json
 import logging
 from typing import Dict, Any, Optional, List
 import pymysql
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 # TiDB Cloud MySQL Configuration
 TIDB_CONFIG = {
-    "host": os.getenv("TIDB_HOST", "gateway01.ap-southeast-1.prod.aws.tidbcloud.com"),
-    "port": int(os.getenv("TIDB_PORT", 4000)),
-    "user": os.getenv("TIDB_USER", "3mxWnQ5gZK6EH7M.root"),
-    "password": os.getenv("TIDB_PASSWORD", "W5UHebtqdfJtwIvb"),
-    "database": os.getenv("TIDB_DATABASE", "shelter"),
+    "host": os.getenv("TIDB_HOST", "your_host_here"),
+    "port": int(os.getenv("TIDB_PORT", "4000")),
+    "user": os.getenv("TIDB_USER", "your_user_here"),
+    "password": os.getenv("TIDB_PASSWORD", "your_password_here"),
+    "database": os.getenv("TIDB_DATABASE", "your_db_here"),
     "ssl": {"ssl_mode": "REQUIRED"},
     "cursorclass": pymysql.cursors.DictCursor,
     "autocommit": True,

@@ -8,6 +8,7 @@ import {
   getMaterials,
   getClimateProfiles,
   submitSimulation,
+  submitBatchSimulation,
   submitCompare,
   pollUntilDone,
   pollTimeoutMsFor,
@@ -123,6 +124,12 @@ const DEFAULT_FORM = {
   duration_hours: 24,
   variant_label: 'Base Design',
 };
+
+const DEFAULT_BATCH_SITES = [
+  { name: 'Leh', lat: 34.15, lon: 77.57 },
+  { name: 'Kargil', lat: 34.56, lon: 76.13 },
+  { name: 'Siachen Base', lat: 35.42, lon: 77.11 },
+];
 
 // --- Step 1: Shelter Geometry ---
 function GeometryStep({ data, onChange, errors }) {
@@ -801,6 +808,16 @@ export default function InputPage() {
   const [loadingMsg, setLoadingMsg] = useState('Running thermal simulation...');
   const [cancelled, setCancelled] = useState(false);
   const [engine, setEngine] = useState('fdm'); 
+  const [activeMode, setActiveMode] = useState('single');
+  const [batchSites, setBatchSites] = useState(() => DEFAULT_BATCH_SITES.map((site) => ({ ...site })));
+  const [batchConfig, setBatchConfig] = useState(() => ({
+    ...DEFAULT_FORM,
+    openings: DEFAULT_FORM.openings.map((opening) => ({ ...opening })),
+  }));
+  const [batchResults, setBatchResults] = useState([]);
+  const [batchId, setBatchId] = useState('');
+  const [batchError, setBatchError] = useState('');
+  const [batchLoading, setBatchLoading] = useState(false);
 
   useEffect(() => {
     getMaterials().catch(() => {}).then((data) => {
@@ -877,6 +894,70 @@ export default function InputPage() {
   const removeVariant = (i) => setVariants((v) => v.filter((_, idx) => idx !== i));
   const updateVariant = (i, field, val) =>
     setVariants((v) => v.map((item, idx) => (idx === i ? { ...item, [field]: val } : item)));
+
+  const updateBatchSite = (index, field, value) => {
+    setBatchSites((sites) => sites.map((site, siteIndex) =>
+      siteIndex === index ? { ...site, [field]: value } : site
+    ));
+  };
+
+  const addBatchSite = () => {
+    setBatchSites((sites) => sites.length >= 10
+      ? sites
+      : [...sites, { name: `Site ${sites.length + 1}`, lat: '', lon: '' }]
+    );
+  };
+
+  const removeBatchSite = (index) => {
+    setBatchSites((sites) => sites.length <= 1
+      ? sites
+      : sites.filter((_, siteIndex) => siteIndex !== index)
+    );
+  };
+
+  const handleBatchSubmit = async () => {
+    const invalidSite = batchSites.find((site) =>
+      !site.name.trim() ||
+      site.lat === '' || !Number.isFinite(Number(site.lat)) || Number(site.lat) < -90 || Number(site.lat) > 90 ||
+      site.lon === '' || !Number.isFinite(Number(site.lon)) || Number(site.lon) < -180 || Number(site.lon) > 180
+    );
+    if (invalidSite) {
+      setBatchError('Each site needs a name, latitude from -90 to 90, and longitude from -180 to 180.');
+      return;
+    }
+
+    setBatchError('');
+    setBatchResults([]);
+    setBatchId('');
+    setBatchLoading(true);
+    try {
+      const sharedConfig = { ...batchConfig };
+      delete sharedConfig.climate_profile_id;
+      delete sharedConfig.min_ambient_temp_C;
+      delete sharedConfig.max_ambient_temp_C;
+      delete sharedConfig.peak_solar_radiation_W_m2;
+      delete sharedConfig.variant_label;
+      sharedConfig.engine = engine;
+
+      const response = await submitBatchSimulation(batchSites.map((site) => ({
+        name: site.name.trim(),
+        lat: Number(site.lat),
+        lon: Number(site.lon),
+        shelter_config: sharedConfig,
+      })));
+      setBatchId(response.batch_id || '');
+      setBatchResults(response.results || []);
+    } catch (error) {
+      const detail = error?.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        setBatchError(detail.map((item) => `${(item.loc || []).slice(1).join('.')}: ${item.msg}`).join('\n'));
+      } else {
+        setBatchError(typeof detail === 'string' ? detail : (error?.message || 'Batch simulation failed.'));
+      }
+    } finally {
+      setBatchLoading(false);
+    }
+  };
 
   const buildPayload = (overrides = {}) => ({
     length_m: parseFloat(formData.length_m),
@@ -983,6 +1064,264 @@ export default function InputPage() {
           />
         )}
 
+        <div className="flex gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
+          {[
+            { id: 'single', label: 'Single Simulation' },
+            { id: 'batch', label: 'Compare Sites' },
+          ].map((mode) => (
+            <button
+              key={mode.id}
+              type="button"
+              onClick={() => setActiveMode(mode.id)}
+              className={`flex-1 rounded-lg px-4 py-2.5 text-xs font-mono font-bold transition-all ${
+                activeMode === mode.id
+                  ? 'bg-slate-900 text-sky-400 shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+
+        {activeMode === 'batch' ? (
+          <div className="space-y-6">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-lg font-bold tracking-tight text-slate-900">Multi-Site Thermal Comparison</h1>
+                  <p className="mt-1 text-xs text-slate-500">Each site uses live NASA POWER climate data and the same shelter configuration.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={addBatchSite}
+                  disabled={batchSites.length >= 10 || batchLoading}
+                  className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-sky-400 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  + Add Site ({batchSites.length}/10)
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {batchSites.map((site, index) => (
+                  <div key={`${site.name}-${index}`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[1.3fr_1fr_1fr_auto] sm:items-end">
+                    <label className="space-y-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600">
+                      Site name
+                      <input
+                        type="text"
+                        value={site.name}
+                        onChange={(event) => updateBatchSite(index, 'name', event.target.value)}
+                        disabled={batchLoading}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium normal-case tracking-normal text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      />
+                    </label>
+                    <label className="space-y-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600">
+                      Latitude
+                      <input
+                        type="number"
+                        min="-90"
+                        max="90"
+                        step="0.0001"
+                        value={site.lat}
+                        onChange={(event) => updateBatchSite(index, 'lat', event.target.value)}
+                        disabled={batchLoading}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      />
+                    </label>
+                    <label className="space-y-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600">
+                      Longitude
+                      <input
+                        type="number"
+                        min="-180"
+                        max="180"
+                        step="0.0001"
+                        value={site.lon}
+                        onChange={(event) => updateBatchSite(index, 'lon', event.target.value)}
+                        disabled={batchLoading}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeBatchSite(index)}
+                      disabled={batchSites.length <= 1 || batchLoading}
+                      className="rounded-lg px-3 py-2 text-xs font-mono font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">Shared Shelter Configuration</h2>
+                <p className="mt-1 text-xs text-slate-500">This design is simulated against each site’s live climate profile.</p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600">
+                  Shelter form
+                  <select
+                    value={batchConfig.shape}
+                    onChange={(event) => setBatchConfig((config) => ({ ...config, shape: event.target.value }))}
+                    disabled={batchLoading}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium normal-case tracking-normal text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  >
+                    <option value="rectangular">Alpine Rectangular</option>
+                    <option value="aframe">A-Frame Cabin</option>
+                    <option value="dome">Igloo Hemisphere</option>
+                  </select>
+                </label>
+                {[
+                  { key: 'length_m', label: 'Length (m)', min: 1, max: 60 },
+                  { key: 'width_m', label: 'Width (m)', min: 1, max: 60 },
+                  { key: 'height_m', label: 'Height (m)', min: 1, max: 25 },
+                ].map(({ key, label, min, max }) => (
+                  <label key={key} className="space-y-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600">
+                    {label}
+                    <input
+                      type="number"
+                      min={min}
+                      max={max}
+                      step="0.1"
+                      value={batchConfig[key]}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        if (Number.isFinite(value) && value > 0) {
+                          setBatchConfig((config) => ({ ...config, [key]: value }));
+                        }
+                      }}
+                      disabled={batchLoading}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <MaterialsStep
+                data={batchConfig}
+                onChange={(field, value) => setBatchConfig((config) => ({ ...config, [field]: value }))}
+                materials={materials}
+                errors={{}}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <label className="space-y-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600">
+                  Facade orientation (°)
+                  <input
+                    type="number"
+                    min="0"
+                    max="360"
+                    value={batchConfig.orientation_deg}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      if (Number.isFinite(value) && value >= 0 && value <= 360) {
+                        setBatchConfig((config) => ({ ...config, orientation_deg: value }));
+                      }
+                    }}
+                    disabled={batchLoading}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  />
+                </label>
+                <label className="space-y-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600">
+                  Simulation horizon
+                  <select
+                    value={batchConfig.duration_hours}
+                    onChange={(event) => setBatchConfig((config) => ({ ...config, duration_hours: Number(event.target.value) }))}
+                    disabled={batchLoading}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  >
+                    {[24, 48, 72].map((hours) => <option key={hours} value={hours}>{hours} hours</option>)}
+                  </select>
+                </label>
+                <label className="space-y-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600">
+                  Computation engine
+                  <select
+                    value={engine}
+                    onChange={(event) => setEngine(event.target.value)}
+                    disabled={batchLoading}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  >
+                    <option value="fdm">Python FDM</option>
+                    <option value="ansys">ANSYS MAPDL</option>
+                  </select>
+                </label>
+              </div>
+
+              {batchError && (
+                <div role="alert" className="whitespace-pre-line rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                  {batchError}
+                </div>
+              )}
+              {batchLoading && (
+                <div role="status" className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-mono text-sky-800">
+                  Fetching NASA POWER climate and simulating {batchSites.length} sites concurrently…
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleBatchSubmit}
+                disabled={batchLoading}
+                className="rounded-lg bg-sky-600 px-5 py-2.5 text-xs font-mono font-bold text-white shadow-md shadow-sky-600/20 transition-colors hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {batchLoading ? 'Running site simulations…' : `Run ${batchSites.length}-Site Comparison`}
+              </button>
+            </section>
+
+            {batchResults.length > 0 && (
+              <section className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-900">Site Comparison Results</h2>
+                  {batchId && <span className="text-[11px] font-mono text-slate-500">Batch {batchId}</span>}
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <table className="min-w-full text-xs font-mono">
+                    <thead className="bg-slate-900 text-white">
+                      <tr>
+                        {['Site', 'Status', 'Min Indoor (°C)', 'Max Indoor (°C)', 'Comfort Hours', 'Recommended Material'].map((heading) => (
+                          <th key={heading} className="whitespace-nowrap px-4 py-3 text-left font-semibold uppercase tracking-wider">{heading}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {batchResults.map((row, index) => {
+                        const result = row.result || {};
+                        const materialId = result.recommended_material_id || result.recommended_material ||
+                          result.input?.wall_material_id || batchConfig.wall_material_id;
+                        const materialName = materials.find((material) =>
+                          (material.id || material.material_id) === materialId
+                        )?.name || materialId || '—';
+                        const temp = (value) => Number.isFinite(Number(value)) ? Number(value).toFixed(1) : '—';
+                        return (
+                          <tr key={`${row.site_name}-${index}`} title={result.error_message || ''} className={`border-b border-slate-100 last:border-0 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
+                            <td className="px-4 py-3 font-bold text-slate-800">
+                              <span className="whitespace-nowrap">{row.site_name}</span>
+                              {result.error_message && <span className="mt-1 block max-w-xs whitespace-normal text-[10px] font-normal text-rose-600">{result.error_message}</span>}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${
+                                row.status === 'complete' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                              }`}>
+                                {row.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right text-sky-700">{temp(result.min_inside_temp_C)}</td>
+                            <td className="px-4 py-3 text-right text-amber-700">{temp(result.peak_inside_temp_C)}</td>
+                            <td className="px-4 py-3 text-right text-slate-700">{result.comfort_hours ?? '—'}</td>
+                            <td className="px-4 py-3 text-slate-700">{materialName}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+          </div>
+        ) : (
+          <>
         {/* Hero Banner Card */}
         <div className="bg-slate-950 text-white rounded-3xl border border-slate-800 p-8 sm:p-12 relative overflow-hidden shadow-2xl cad-grid-dark">
           <div className="relative z-10 space-y-6">
@@ -1108,6 +1447,8 @@ export default function InputPage() {
             </p>
           </div>
         </div>
+          </>
+        )}
       </div>
     );
   }

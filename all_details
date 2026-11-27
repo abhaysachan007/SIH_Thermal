@@ -1,0 +1,819 @@
+# SIH Thermal - Complete Project Audit and Research Details
+
+## 1. PROJECT OVERVIEW
+
+### Purpose
+
+This project is a web-based thermal-design and optimization platform for passive shelters in Ladakh and similar high-altitude cold deserts. It accepts shelter dimensions, materials, openings, climate inputs, and orientation, then:
+
+- Predicts indoor temperatures over a defined period.
+- Estimates solar gains.
+- Estimates conductive, floor, window, door, roof, and infiltration losses.
+- Compares multiple shelter variants.
+- Searches an optimization design space.
+- Generates ANSYS MAPDL contracts and APDL scripts.
+- Runs ANSYS MAPDL when a usable native installation is available.
+- Estimates materials costs and heating-cost savings.
+- Provides charts and a 3D shelter visualization.
+
+The project is based on SIH Problem Statement SIH26051: “Software Based Model Development for Design of Area Specific Shelter for Thermal Comfort Maintenance (Ladakh).”
+
+### Current Status
+
+**Advanced prototype / functional MVP**
+
+It is not currently production-ready. Evidence:
+
+- Backend candidate-pipeline tests pass: 15 tests passed.
+- Frontend production build passes.
+- Real FDM and optimization workflows exist.
+- TiDB/MySQL persistence is implemented.
+- NASA POWER integration exists.
+- ANSYS discovery, contract generation, APDL scripting, and subprocess execution exist.
+- Native ANSYS execution is optional and was not empirically verified in this audit.
+- Many ANSYS pipeline runs fall back transparently to mock mode.
+- Database credentials are exposed as source defaults.
+- Authentication, authorization, deployment isolation, and durable multi-worker jobs are absent.
+
+### Tech Stack
+
+| Area | Technology |
+|---|---|
+| Frontend | React 19, Vite 8, React Router 7, Tailwind CSS 4 |
+| Charts | Recharts |
+| 3D | Three.js |
+| PDF/export | jsPDF, html2canvas |
+| Backend API | FastAPI, Uvicorn |
+| Validation | Pydantic 2 |
+| Numerical work | NumPy, Pandas |
+| Physics | Custom transient finite-difference/lumped-capacitance thermal logic |
+| ANSYS | PyMAPDL / ansys-mapdl-core, APDL, SOLID70 |
+| Database | TiDB Cloud / MySQL-compatible database through PyMySQL |
+| Climate | NASA POWER Hourly API and bundled climate JSON |
+| Testing | pytest |
+
+---
+
+## 2. FOLDER AND FILE ARCHITECTURE
+
+### Top-Level Files and Directories
+
+```text
+SIH_Thermal/
+├── backend/
+├── frontend/
+├── simulation/
+├── .gitignore
+├── Ladakh_Passive_Shelter_Complete_Project_Report.docx
+├── RESOURCES.docx
+├── SIH26051_Research_Compilation.docx
+├── direct_build.apdl
+├── OPEN_IN_ANSYS.bat
+├── scratch_write.py
+└── SIH_Thermal/                 # Duplicate nested project copy
+```
+
+The nested SIH_Thermal directory contains another copy of the application, including its own `.venv`, and is currently untracked.
+
+### Backend Directory
+
+```text
+backend/
+├── app/
+│   ├── main.py
+│   ├── models/
+│   │   └── schemas.py
+│   ├── routers/
+│   │   ├── simulation.py
+│   │   ├── materials.py
+│   │   └── pipeline_router.py
+│   ├── services/
+│   │   ├── simulation_service.py
+│   │   ├── fallback_engine.py
+│   │   ├── ansys_engine.py
+│   │   ├── nasa_climate.py
+│   │   ├── optimizer.py
+│   │   ├── cost_estimator.py
+│   │   ├── recommendation.py
+│   │   └── results_processor.py
+│   ├── pipeline/
+│   │   ├── pipeline_orchestrator.py
+│   │   ├── candidate_generator.py
+│   │   ├── geometry_validator.py
+│   │   ├── thermal_screening.py
+│   │   ├── ranking_engine.py
+│   │   ├── diversity_selector.py
+│   │   ├── climate_repo.py
+│   │   ├── material_repo.py
+│   │   ├── ansys_adapter.py
+│   │   └── models.py
+│   ├── db/
+│   │   └── database.py
+│   └── data/
+│       ├── materials.json
+│       └── climate_profiles.json
+├── tests/
+│   └── test_shelter_pipeline.py
+├── simulation/jobs/
+├── README_PIPELINE.md
+├── requirements.txt
+└── run.py
+```
+
+### Backend Entry Points
+
+- backend/run.py: runs `uvicorn app.main:app` on `0.0.0.0:8000` with reload enabled.
+- backend/app/main.py: defines the FastAPI application, CORS policy, startup event, routers, health endpoint, database status, and history endpoints.
+
+### Backend Modules
+
+- app/services/simulation_service.py:
+  - Loads JSON material and climate databases.
+  - Maintains in-memory single-simulation and comparison jobs.
+  - Selects FDM or ANSYS.
+  - Scales climate data.
+  - Processes and persists results.
+- app/services/fallback_engine.py:
+  - Uses the Python FDM-style fallback solver.
+- app/services/ansys_engine.py:
+  - Finds local MAPDL executables.
+  - Builds and runs ANSYS thermal models.
+  - Handles SOLID70 and temperature extraction.
+- app/services/nasa_climate.py:
+  - Calls NASA POWER using T2M, ALLSKY_SFC_SW_DWN, and WS2M.
+- app/services/optimizer.py:
+  - Runs a 36-design parameter sweep.
+- app/services/cost_estimator.py:
+  - Calculates material cost and annual heating-cost estimates.
+- app/services/recommendation.py:
+  - Selects the best compared variant.
+- app/services/results_processor.py:
+  - Clamps and normalizes solver output.
+- app/pipeline/pipeline_orchestrator.py:
+  - Orchestrates candidate generation, validation, screening, ranking, top-10 selection, and ANSYS.
+- app/pipeline/candidate_generator.py:
+  - Generates parametric candidate shelters.
+- app/pipeline/geometry_validator.py:
+  - Performs hard constraints and 2D opening collision checks.
+- app/pipeline/thermal_screening.py:
+  - Performs transient lumped-capacitance thermal screening.
+- app/pipeline/ranking_engine.py:
+  - Calculates comfort, energy, and cost scores.
+- app/pipeline/diversity_selector.py:
+  - Selects diverse top-ten designs.
+- app/pipeline/ansys_adapter.py:
+  - Builds ANSYS JSON/APDL contracts and native/mock execution results.
+- app/pipeline/climate_repo.py:
+  - Reads and scales bundled climate time series.
+- app/pipeline/material_repo.py:
+  - Centralizes thermal conductivity, density, heat capacity, glazing, resistance, and cost data.
+- app/db/database.py:
+  - Creates and updates TiDB/MySQL tables and stores history.
+
+### Frontend Directory
+
+```text
+frontend/
+├── src/
+│   ├── main.jsx
+│   ├── App.jsx
+│   ├── api/simulationApi.js
+│   ├── pages/
+│   │   ├── InputPage.jsx
+│   │   └── ResultsPage.jsx
+│   └── components/
+│       ├── Shelter3DViewer.jsx
+│       ├── TemperatureChart.jsx
+│       ├── HeatFlowChart.jsx
+│       ├── SolarGainChart.jsx
+│       ├── ComparisonTable.jsx
+│       ├── RecommendationCard.jsx
+│       ├── MaterialSelect.jsx
+│       ├── CompassSelector.jsx
+│       └── StepIndicator.jsx
+```
+
+### Frontend Entry Points
+
+- frontend/src/main.jsx: creates and renders the React root.
+- frontend/src/App.jsx: defines the application shell and `/` and `/results` routes.
+- frontend/src/pages/InputPage.jsx: main shelter configuration and submit workflow.
+- frontend/src/pages/ResultsPage.jsx: result charts, comparison, 3D visualization, and export.
+- frontend/src/api/simulationApi.js: Axios API calls and polling logic.
+
+### Configuration Files
+
+- frontend/package.json: frontend dependencies and scripts.
+- frontend/vite.config.js: proxies `/api` to `http://localhost:8000`.
+- frontend/tailwind.config.js: defines Tailwind theme colors.
+- frontend/postcss.config.js: PostCSS setup.
+- frontend/.oxlintrc.json: Oxlint configuration.
+- backend/requirements.txt: Python dependencies.
+- backend/README_PIPELINE.md: pipeline architecture and API documentation.
+- .gitignore: excludes `.venv`, `__pycache__`, `.env`, `simulation/`, and `*.log`.
+
+### Other Significant Files
+
+- direct_build.apdl: hard-coded 7.5 m × 7 m × 3 m shelter APDL example.
+- OPEN_IN_ANSYS.bat: machine-specific ANSYS Student launcher.
+- backend/simulation/jobs/: generated simulation and solver output directories.
+- Ladakh_Passive_Shelter_Complete_Project_Report.docx: project feasibility and impact report.
+- RESOURCES.docx: resource database, despite its filename, containing plain text/Markdown-style links.
+- SIH26051_Research_Compilation.docx: SIH problem statement and research compilation.
+
+---
+
+## 3. WHAT HAS BEEN BUILT SO FAR
+
+### Fully Implemented Features
+
+1. FastAPI application with health and API metadata endpoints.
+2. 15-material static material catalog.
+3. Winter, summer, spring, and cloudy Ladakh climate profiles.
+4. NASA live-climate lookup.
+5. Custom ambient-temperature and solar-radiation scaling.
+6. Rectangular, dome, and A-frame request support.
+7. Custom wall, roof, and floor material properties.
+8. 24-hour transient indoor-temperature prediction.
+9. Python FDM/lumped-capacitance fallback solver.
+10. Native ANSYS MAPDL executable discovery.
+11. ANSYS APDL build and thermal solve hooks.
+12. SOLID70-based generated model support.
+13. 36-design parameter optimizer.
+14. Up to six-variant comparison support.
+15. Cost and annual heating-estimate calculations.
+16. Candidate shelter generation.
+17. Hard geometry validation.
+18. Opening collision detection.
+19. Material availability checks.
+20. Multi-objective ranking.
+21. Diverse top-10 candidate selection.
+22. ANSYS JSON payload and APDL script generation.
+23. Transparent mock ANSYS execution.
+24. TiDB/MySQL persistence.
+25. Simulation history and database status endpoints.
+26. 3D Three.js shelter viewer.
+27. Recharts-based temperature, heat-flow, and solar-gain charts.
+28. jsPDF/html2canvas report export.
+29. FLIR-style 3D thermal color view.
+
+### Partially Implemented or Stubbed
+
+- ANSYS native execution exists, but much of the pipeline returns mock-completed status and contract-only output.
+- Live NASA climate is used by the legacy simulation service, but the candidate pipeline only reads static JSON in app/pipeline/climate_repo.py.
+- Dome and A-frame shapes are represented in the input model and viewer, while much of the numerical geometry remains rectangular-envelope logic.
+- The report claims a 3D SOLID70 workflow, but native ANSYS end-to-end extracted result handling is not complete.
+- IoT digital-twin integration is documented but not built.
+- GIS terrain and mountain shading are not built.
+- Offline PWA support is not built.
+- ISO 13790 and TRNSYS/EnergyPlus validation claims are not implemented or proven.
+
+### TODOs, FIXMEs, and Placeholder Code
+
+No direct TODO, FIXME, HACK, or XXX markers were found in application source.
+
+Relevant placeholder-style behavior:
+
+- ansys_status `"mock_completed"` in app/pipeline/ansys_adapter.py.
+- Fixed “Leh 34.15°N / 3500m” UI telemetry in frontend/src/App.jsx.
+- Representative construction-cost constants in app/services/cost_estimator.py.
+- A silent database fallback that keeps in-memory state and does not surface persistence failure to the client.
+- The “Liu–Jordan” solar model is referenced in documentation but is not fully reflected in candidate-pipeline irradiance calculation.
+
+---
+
+## 4. DATA FLOW AND ARCHITECTURE
+
+### Legacy Single-Simulation Flow
+
+```text
+InputPage.jsx
+  -> submitSimulation()
+  -> POST /api/simulate
+  -> ShelterInput validation
+  -> SimulationService.submit_simulation()
+  -> scale_climate_profile()
+  -> _select_and_run()
+  -> run_fdm_simulation() or run_ansys_simulation()
+  -> process_raw_results()
+  -> estimate_costs()
+  -> save_simulation()
+  -> GET /api/results/{job_id}
+  -> ResultsPage.jsx
+```
+
+Important functions:
+
+- submit_simulation() in app/routers/simulation.py.
+- SimulationService.submit_simulation() in app/services/simulation_service.py.
+- SimulationService._run_single() in app/services/simulation_service.py.
+- run_fdm_simulation() in app/services/fallback_engine.py.
+- run_ansys_simulation() in app/services/ansys_engine.py.
+- process_raw_results() in app/services/results_processor.py.
+- estimate_costs() in app/services/cost_estimator.py.
+
+### Comparison Flow
+
+```text
+POST /api/compare
+  -> submit_compare()
+  -> SimulationService.submit_compare()
+  -> execute each variant in sequence
+  -> generate_recommendation()
+  -> save_comparison()
+  -> GET /api/compare/{job_id}
+```
+
+### Candidate-Generation Flow
+
+```text
+POST /api/pipeline/generate-and-screen
+  -> run_candidate_pipeline()
+  -> load_climate_timeseries()
+  -> generate_candidate_shelters()
+  -> GeometryValidator.validate()
+  -> ThermalScreeningEngine.evaluate()
+  -> score_candidate()
+  -> select_diverse_top_10()
+  -> build_ansys_contract_payload()
+  -> run_ansys_evaluation()
+  -> PipelineOutput
+```
+
+Important implementation:
+
+- run_candidate_pipeline() in app/pipeline/pipeline_orchestrator.py.
+- generate_candidate_shelters() in app/pipeline/candidate_generator.py.
+- GeometryValidator.validate() in app/pipeline/geometry_validator.py.
+- ThermalScreeningEngine.evaluate() in app/pipeline/thermal_screening.py.
+- score_candidate() in app/pipeline/ranking_engine.py.
+- select_diverse_top_10() in app/pipeline/diversity_selector.py.
+- run_ansys_evaluation() in app/pipeline/ansys_adapter.py.
+
+### API Routes
+
+| Method | Route | Function |
+|---|---|---|
+| GET | `/` | API metadata |
+| GET | `/health` | Health check |
+| GET | `/api/db-status` | TiDB status |
+| GET | `/api/history` | Simulation history |
+| GET | `/api/materials` | Legacy material catalog |
+| GET | `/api/materials/{material_id}` | Individual material |
+| GET | `/api/climate-profiles` | Climate profile summaries |
+| GET | `/api/climate-profiles/{profile_id}` | Full climate profile |
+| GET | `/api/climate/live` | NASA live climate |
+| POST | `/api/simulate` | Submit one simulation |
+| GET | `/api/results/{job_id}` | Poll a simulation |
+| POST | `/api/compare` | Submit variant comparison |
+| GET | `/api/compare/{job_id}` | Poll comparison |
+| POST | `/api/optimize` | Run optimization |
+| POST | `/api/pipeline/generate-and-screen` | Run candidate pipeline |
+| GET | `/api/pipeline/materials` | Pipeline material catalog |
+| POST | `/api/pipeline/validate-geometry` | Validate one candidate |
+
+---
+
+## 5. DEPENDENCIES AND INTEGRATIONS
+
+### Backend Libraries
+
+- fastapi: REST API framework.
+- uvicorn: ASGI server.
+- pydantic: request and response validation.
+- numpy: numerical calculations.
+- pandas: data structures and processing.
+- httpx: NASA POWER HTTP requests.
+- ansys-mapdl-core: native MAPDL/PyMAPDL integration.
+- fpdf2: PDF functionality.
+- aiofiles: asynchronous files.
+- python-multipart: multipart request handling.
+
+PyMySQL is imported for TiDB/MySQL access but is not declared in backend/requirements.txt.
+
+### Frontend Libraries
+
+- react/react-dom: UI.
+- react-router-dom: page routing.
+- axios: API requests.
+- three: 3D visualization.
+- recharts: charts.
+- jspdf/html2canvas: report export.
+- tailwindcss: styling.
+
+### External Integrations
+
+#### NASA POWER
+
+Implemented in app/services/nasa_climate.py and app/routers/simulation.py.
+
+The API endpoint is:
+
+`https://power.larc.nasa.gov/api/temporal/hourly/point`
+
+Parameters:
+
+- T2M: 2 m air temperature.
+- ALLSKY_SFC_SW_DWN: all-sky shortwave downward irradiance on a horizontal surface.
+- WS2M: 2 m wind speed.
+
+#### TiDB Cloud
+
+Implemented in app/db/database.py.
+
+Tables:
+
+- simulations
+- comparisons
+- materials_catalog
+
+The database is optional at runtime: connection initialization and save operations are wrapped in exceptions.
+
+#### ANSYS MAPDL
+
+Executable discovery checks:
+
+- MAPDL_EXEC_PATH.
+- AWP_ROOTxxx environment variables.
+- Standard ANSYS/ANSYS Student installation paths.
+
+The ANSYS solver uses MAPDL batch mode and SOLID70 thermal elements.
+
+### Environment Variables
+
+- TIDB_HOST
+- TIDB_PORT
+- TIDB_USER
+- TIDB_PASSWORD
+- TIDB_DATABASE
+- MAPDL_EXEC_PATH
+- ANSYS_HARD_TIMEOUT_S
+- ANSYS_JOBS_DIR
+- PIPELINE_JOBS_DIR
+
+### Critical Secret Issue
+
+app/db/database.py contains fallback source-code values for:
+
+- TiDB user.
+- TiDB password.
+- TiDB host.
+
+These credentials are exposed and must be removed and rotated.
+
+---
+
+## 6. GAPS AND NEXT STEPS
+
+### Critical Security and Production Issues
+
+1. Remove the TiDB fallback username and password.
+2. Rotate the exposed database password.
+3. Require environment variables for production database configuration.
+4. Restrict CORS from `allow_origins=['*']`.
+5. Add authentication and authorization.
+6. Protect history and database-status endpoints.
+7. Replace in-memory jobs with Redis, database-backed job state, or a task queue.
+8. Add tenant/user isolation if multiple users deploy the system.
+9. Add TLS and deployment configuration.
+
+### Backend Reliability Issues
+
+1. In-memory job dictionaries do not survive backend restarts.
+2. In-memory jobs do not synchronize across multiple Uvicorn workers.
+3. Database initialization and save failures are mostly swallowed.
+4. Cost-estimation failures are swallowed.
+5. The frontend API is hard-coded to `http://localhost:8000`.
+6. No Docker or Docker Compose setup exists.
+7. No CI workflow exists.
+8. No worker queue handles long-running ANSYS jobs.
+9. Generated simulation directories have no retention policy or cleanup.
+10. The backend imports `pymysql` but it is absent from requirements.txt.
+11. pytest is absent from requirements.txt.
+
+### Physics and Validation Issues
+
+1. The candidate-pipeline solver applies south-window solar gain but not complete wall/roof incidence modeling for all facades.
+2. East, west, north, and roof-facing windows are not fully modeled with accurate tilted-surface irradiance.
+3. Horizontal NASA irradiance is not converted through the full Liu–Jordan transposition process for every wall and roof.
+4. Dome and A-frame geometry is not completely represented in every solver.
+5. The comfort band is hard-coded to 15°C–25°C despite report targets of 18°C–22°C.
+6. Cost rates are representative constants, not validated location-specific construction estimates.
+7. The project does not include measured validation against a real shelter.
+8. Heat-flow, indoor-temperature, and solar-gain outputs are not independently benchmarked.
+9. Thermal lag and time-to-peak behavior need direct validation.
+10. Infiltration is a fixed 0.45 ACH and is not user-configurable in every solver path.
+
+### ANSYS Issues
+
+1. Native ANSYS is not guaranteed to be installed or licensed.
+2. The mock adapter generates contracts but cannot provide real FEA heat-flow or temperature data.
+3. Native candidate-pipeline execution is only contract-level in some cases.
+4. Native legacy execution needs more robust extraction and normalization.
+5. ANSYS timeout handling and process cleanup need stronger orchestration.
+6. Subprocess fallback should indicate real versus mock status unambiguously in every response.
+
+### Missing Features
+
+1. Authentic IoT digital-twin integration.
+2. GIS terrain and shading calculations.
+3. Offline PWA.
+4. A real annual-climate archive workflow.
+5. Full EnergyPlus/TRNSYS cross-validation.
+6. Unit and integration tests for legacy API endpoints.
+7. API schema versioning.
+8. Structured logging and monitoring.
+9. Automated ANSYS benchmarks.
+10. User authentication and saved personal designs.
+
+### Recommended Immediate Next Work
+
+1. Rotate and remove all database credentials.
+2. Add environment-based configuration and deployment secrets.
+3. Restrict CORS and add authentication.
+4. Add `pymysql` and pytest to backend/requirements.txt.
+5. Replace in-memory job storage with durable job state.
+6. Use a configurable frontend API URL.
+7. Add Docker Compose for backend, frontend, and database integration.
+8. Integrate NASA live profiles into the candidate pipeline.
+9. Implement proper Liu–Jordan tilted-surface irradiance for south, east, west, north, and roof surfaces.
+10. Improve dome and A-frame physical models.
+11. Make ANSYS mock/native status explicit.
+12. Parse and normalize real native MAPDL temperature and heat-flow results.
+13. Add real or synthetic benchmark validation.
+14. Remove or merge the duplicate nested SIH_Thermal project.
+15. Add CI build and test checks.
+
+### Validation Completed
+
+- Backend pipeline tests: 15/15 passed.
+- Frontend production build: successful.
+- Frontend warning: main JavaScript bundle is about 1.75 MB and should be split.
+- Native ANSYS execution was not available or licensed in this audit environment, so native FEA accuracy remains unverified.
+
+---
+
+## 7. SIH26051 OFFICIAL PROBLEM STATEMENT
+
+### Problem ID
+
+- PS ID: SIH26051
+- Organization: DRDO
+- Department: Department of Defence Production / IDEX
+- Category: Software
+- Theme: Miscellaneous
+
+### Problem Background
+
+Ambient atmospheric conditions affect shelter indoor temperature. Existing shelters are often not designed for local conditions and are therefore inefficient, requiring external thermal-comfort systems.
+
+The problem is explicitly centered on Ladakh's high-altitude cold region.
+
+### Problem Description
+
+Ladakh receives high annual solar irradiance, approximately 1900–2100 kWh/m²/year, 7.9 average sunshine hours, and 300+ cloud-free days annually.
+
+Interior shelter temperatures can be suitable during daytime due to trapped solar thermal energy, but become close to ambient after sunset because of:
+
+- Conductive heat loss through walls and roof.
+- Heat loss through floors and openings.
+- Infiltration and air leakage.
+
+The solution must be developed as a user-friendly ANSYS thermal model that accepts user-defined values and atmospheric data and supports comparison of material and shelter options under identical ambient conditions.
+
+### Expected Outputs
+
+The problem statement requires exactly three outputs:
+
+1. Predicted shelter indoor temperature for user-defined inputs.
+2. Thermal energy generated from solar radiation.
+3. Heat-flow details based on indoor–outdoor temperature differences over a defined period.
+
+### Scope Guard
+
+The SIH26051 scope is a software-based ANSYS predictive model.
+
+The research compilation explicitly identifies these as out of scope for core evaluation:
+
+- IoT systems.
+- FLIR thermography.
+- Defense-specific applications.
+- Offline PWA features.
+- Generative AI optimization.
+- Full digital twins.
+
+They may be future scope, but the central model should remain ANSYS-based and user-driven.
+
+---
+
+## 8. ANSYS REQUIREMENT
+
+ANSYS Mechanical APDL is considered central because the problem statement explicitly names ANSYS.
+
+The practical implementation should:
+
+1. Parameterize geometry.
+2. Parameterize material properties.
+3. Parameterize climate boundary conditions.
+4. Use SOLID70 thermal elements.
+5. Script repeatable runs through PyMAPDL instead of manual GUI interaction.
+6. Compare designs through JSON or table records.
+7. Output indoor temperature, solar gain, and heat flow.
+
+Recommended package:
+
+`pip install ansys-mapdl-core`
+
+Official examples and references:
+
+- https://github.com/ansys/pymapdl
+- https://mapdl.docs.pyansys.com/
+- https://docs.pyansys.com/
+- https://pypi.org/project/ansys-mapdl-core/
+- https://mapdl.docs.pyansys.com/version/stable/examples/gallery_examples/00-mapdl-examples/3d_plate_thermal.html
+
+---
+
+## 9. REQUIRED BUILD PIPELINE FROM THE SIH RESEARCH
+
+| Stage | Work | Source or Tool |
+|---|---|---|
+| 1. Data input | Gather hourly ambient temperature, horizontal solar irradiance, wind speed, and humidity | NASA POWER |
+| 2. Solar geometry | Convert horizontal irradiance into tilted wall and roof irradiance | Liu–Jordan isotropic transposition |
+| 3. Material properties | Input k, density, and Cp | Research values and standards |
+| 4. Geometry and FE model | Generate walls, roof, openings, glazing, and orientation | ANSYS APDL/PyMAPDL |
+| 5. Thermal simulation | Solve transient heat conduction with solar and infiltration loads | SOLID70 and transient MAPDL |
+| 6. Comparison engine | Batch-run candidates under identical climate conditions | PyMAPDL batch jobs |
+| 7. Output | Return exactly the three required outputs | Table, JSON, or plots |
+
+---
+
+## 10. CLIMATE DATA SOURCES
+
+### NASA POWER Daily API
+
+- Target parameters: T2M, ALLSKY_SFC_SW_DWN, WS10M, RH2M.
+- Free and keyless.
+- URL: https://power.larc.nasa.gov/docs/services/api/temporal/daily/
+
+### NASA POWER Hourly API
+
+Required for transient simulation.
+
+- URL: https://power.larc.nasa.gov/docs/services/api/temporal/hourly/
+- API tutorial: https://power.larc.nasa.gov/docs/tutorials/service-data-request/api/
+- AWS Open Data: https://registry.opendata.aws/nasa-power
+
+### Indian Data
+
+- data.gov.in / IMD: https://data.gov.in/
+
+The target coordinates are approximately 34.15°N, 77.58°E, at around 3524–3525 m altitude.
+
+### Required Parameters
+
+- Ambient temperature: T2M.
+- Horizontal solar irradiance: ALLSKY_SFC_SW_DWN.
+- Wind: WS10M or WS2M.
+- Relative humidity: RH2M.
+
+---
+
+## 11. GITHUB AND SIMULATION RESOURCES
+
+- ansys/pymapdl: https://github.com/ansys/pymapdl
+- PyMAPDL thermal example: https://mapdl.docs.pyansys.com/version/stable/examples/gallery_examples/00-mapdl-examples/3d_plate_thermal.html
+- PyMAPDL multi-layer discussion: https://github.com/ansys/pymapdl/discussions/4018
+- ansys-mapdl-core: https://pypi.org/project/ansys-mapdl-core/
+- PyAnsys docs: https://docs.pyansys.com/
+- bsl546/energym: https://github.com/bsl546/energym
+- Trombe-wall EnergyPlus reference: https://bigladdersoftware.com/epx/docs/8-3/engineering-reference/trombe-walls.html
+- NatLabRockies/EnergyPlus: https://github.com/NatLabRockies/EnergyPlus
+- Modelica Buildings solar boundary conditions: https://simulationresearch.lbl.gov/modelica
+
+---
+
+## 12. RESEARCH PAPERS AND REFERENCES
+
+### Ladakh Passive Housing
+
+- Prakash, Goyal, Goyal, Sawhney, and Sodha (1988), design and thermal simulation of a solar passive house for Ladakh.
+- Sodha, Sawhney, and Deshmukh (1989), optimization of energy conservation and solar passive measures in cold desert climates.
+- A Study on the Effectiveness of Passive Solar Housing in Ladakh.
+- Sustainable potentiality of achieving thermal comfort in vernacular Ladakhi dwellings.
+- Hybrid Solution for Solar Passive Architecture in the High-Altitude Cold Climate of Leh.
+- Efforts to Resurrect and Adapt Earth Building and Passive Solar Techniques in Ladakh, India.
+- Down to Earth / CSE: Ladakh's new buildings and solar power.
+
+### Thermal and Material Studies
+
+- Thermal environment in rammed earth structures: systematic review.
+- Thermophysical Characteristics of Clay for Efficient Rammed Earth Wall Construction.
+- Empirical validation of solar irradiance models on inclined surfaces.
+
+### Defence and Regional Research
+
+- Defence Institute of High Altitude Research (DIHAR), DRDO-affiliated and relevant to high-altitude space heating.
+
+---
+
+## 13. MATERIAL PROPERTY REFERENCE DATA
+
+| Material | Conductivity k | Density | Specific Heat Cp | Notes |
+|---|---:|---:|---:|---|
+| Rammed earth / clay measured range | 0.52–1.21 W/mK | 1490–2150 kg/m³ | 701–999 J/kgK | Twelve measured clay samples |
+| Rammed earth literature reference | 1.25 W/mK | 1540 kg/m³ | 1260 J/kgK | Common cited value |
+| Granite masonry | 1.7–4.0 W/mK | approximately 2700 kg/m³ | approximately 790 J/kgK | Typical 2.5–3.5 W/mK |
+| Limestone masonry | 1.0–1.5 W/mK | 2200–2600 kg/m³ | approximately 880 J/kgK | Lower conductivity and slow release |
+| EPS insulation | 0.032–0.045 W/mK | 14–38 kg/m³ | approximately 1500 J/kgK | Distinct insulation layer |
+| Mud-EPS composite | Use separate mud and EPS layers | — | — | Do not blend as a single material |
+| Poplar/softwood timber | 0.12–0.16 W/mK | 450–550 kg/m³ | approximately 1600 J/kgK | Local lintels and roof framing |
+
+ANSYS material commands correspond to:
+
+- KXX: thermal conductivity.
+- DENS: density.
+- C: specific heat.
+
+---
+
+## 14. SOLAR GEOMETRY REQUIREMENT
+
+NASA POWER returns ALLSKY_SFC_SW_DWN on a horizontal surface. It cannot be used directly as vertical-wall boundary irradiance.
+
+The project should split horizontal irradiance into:
+
+- Beam/direct component.
+- Diffuse horizontal component.
+- Ground-reflected component.
+
+It should then transpose it to each actual surface:
+
+- South vertical wall.
+- North vertical wall.
+- East and west vertical walls.
+- Flat or pitched roof.
+
+The simplest documented method is the Liu–Jordan isotropic transposition model.
+
+For an isotropic sky, the tilted diffuse irradiation is commonly represented as:
+
+`H_d,tilt = H_d,horizontal × (1 + cos(beta)) / 2`
+
+The wall factor must also account for:
+
+- Solar altitude.
+- Solar azimuth.
+- Wall azimuth.
+- Wall tilt.
+- Incidence angle.
+- Roof pitch.
+
+Failure to perform this transposition makes the solar-gain output numerically wrong even if ANSYS geometry and mesh are otherwise correct.
+
+---
+
+## 15. ESTABLISHED LADAKH THERMAL PHYSICS
+
+- Ladakh is approximately 3000–5000 m above sea level.
+- Winter outdoor temperatures regularly reach -15°C to -30°C.
+- Daily temperature swings can exceed 25°C–30°C.
+- Traditional Ladakhi designs use:
+  - South-facing orientation.
+  - Thick thermal-mass walls.
+  - Minimal openings on non-south facades.
+  - Small windows.
+- Trombe-wall passive designs have shown approximately 50% fuel-consumption reduction in monitored Ladakh buildings.
+- Heat losses occur through:
+  - Wall conduction.
+  - Roof conduction.
+  - Floor conduction.
+  - Glazing conduction.
+  - Door conduction.
+  - Air infiltration.
+- A 450 mm rammed-earth wall can have roughly 8–10 hours of thermal lag.
+- A 600 mm stone wall can have over 12 hours of thermal lag.
+- Peak indoor temperature can trail peak outdoor or solar conditions by many hours.
+
+---
+
+## 16. SUMMARY OF WHAT SHOULD BE BUILT
+
+The core SIH26051 model should contain:
+
+1. A PyMAPDL-scripted ANSYS model.
+2. Multi-layer wall construction.
+3. Defined length, width, height, shape, orientation, openings, and glazing.
+4. NASA hourly climate input.
+5. Tilted-surface solar irradiance.
+6. Transient SOLID70 thermal solving.
+7. Solar gain through glazing.
+8. Infiltration loss.
+9. Batch material and geometry comparison.
+10. Ranking by indoor temperature stability and heat loss.
+11. Exactly these outputs:
+   - Predicted indoor temperature.
+   - Predicted solar thermal energy gain.
+   - Heat flow by temperature difference over the selected period.
+
+IoT, FLIR shaders, defense UI, PWA, and generative-AI features should remain future scope rather than core evaluation requirements.

@@ -1,8 +1,12 @@
+import os
+from pathlib import Path
+
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import simulation, materials, pipeline_router
 from app.services.simulation_service import get_simulation_service
-from app.db.database import init_db, get_db_status, get_history_from_db
+from app.db.database import init_db, get_db_status, get_history_from_db, get_connection
 
 app = FastAPI(
     title='Ladakh Passive Shelter Thermal Tool API',
@@ -34,6 +38,44 @@ app.include_router(pipeline_router.router)
 def health_check():
     return {'status': 'ok', 'service': 'ladakh-thermal-tool'}
 
+@app.get('/api/health/detailed')
+def detailed_health_check():
+    database = "unavailable"
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+        finally:
+            conn.close()
+        database = "connected"
+    except Exception:
+        database = "unavailable"
+
+    nasa_api = "unavailable"
+    try:
+        response = httpx.head("https://power.larc.nasa.gov", timeout=3.0)
+        response.raise_for_status()
+        nasa_api = "reachable"
+    except Exception:
+        nasa_api = "unavailable"
+
+    mapdl_path = os.getenv("MAPDL_EXEC_PATH")
+    ansys = "available" if mapdl_path and Path(mapdl_path).exists() else "mock_mode"
+    service = get_simulation_service()
+    active_jobs = sum(
+        job.get("status") not in {"complete", "failed"}
+        for job in service.jobs.values()
+    )
+
+    return {
+        "status": "ok",
+        "database": database,
+        "nasa_api": nasa_api,
+        "ansys": ansys,
+        "active_jobs": active_jobs,
+    }
+
 @app.get('/api/db-status')
 def db_status():
     """Returns live connection and table statistics from TiDB Cloud MySQL."""
@@ -53,4 +95,3 @@ def root():
         'db_status': '/api/db-status',
         'history': '/api/history',
     }
-

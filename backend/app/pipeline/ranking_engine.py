@@ -65,3 +65,31 @@ def score_candidate(
     }
 
     return total_score, breakdown, notes
+
+
+def build_recommendation_summary(result: CandidateRankingResult) -> Dict[str, Any]:
+    design = result.design
+    materials = get_material_repo()
+    wall_material = materials.get(design.wall_system.outer_layer.material_id).get(
+        "name", design.wall_system.outer_layer.material_id
+    )
+    roof_material = materials.get(design.roof.material_id).get(
+        "name", design.roof.material_id
+    )
+    orientations = ("north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest")
+    orientation = orientations[round(design.orientation_deg / 45) % len(orientations)]
+    comfort_hours = result.screening_results.comfort_hours_count
+    min_indoor_temp = result.screening_results.min_indoor_temperature_c
+
+    return {
+        "wall_material": wall_material,
+        "roof_material": roof_material,
+        "orientation": orientation,
+        "comfort_hours": comfort_hours,
+        "min_indoor_temp_c": min_indoor_temp,
+        "reason": (
+            f"{wall_material} walls with {roof_material} roof facing {orientation} "
+            f"achieves {comfort_hours} comfort hours and a minimum indoor temperature "
+            f"of {min_indoor_temp:.1f}°C."
+        ),
+    }

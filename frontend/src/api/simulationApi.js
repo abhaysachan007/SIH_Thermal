@@ -1,12 +1,16 @@
 import axios from 'axios';
 
-const API = axios.create({ baseURL: 'http://localhost:8000' });
+const BASE_URL = import.meta.env.VITE_API_URL || "";
+const API = axios.create({ baseURL: BASE_URL });
 
 export const getMaterials = () => API.get('/api/materials').then(r => r.data);
 export const getClimateProfiles = () => API.get('/api/climate-profiles').then(r => r.data);
 
 export const submitSimulation = (shelterInput) =>
   API.post('/api/simulate', shelterInput).then(r => r.data);
+
+export const submitBatchSimulation = (sites) =>
+  API.post('/api/batch-simulate', { sites }).then(r => r.data);
 
 export const pollResult = (jobId) =>
   API.get(`/api/results/${jobId}`).then(r => r.data);
@@ -48,3 +52,12 @@ export const runOptimizer = (shelterInput) =>
 export const fetchLiveClimate = (latitude = 34.15, longitude = 77.57) =>
   API.get('/api/climate/live', { params: { latitude, longitude } }).then(r => r.data);
 
+export const runBudgetOptimizer = (request) =>
+  API.post('/api/pipeline/budget-optimize', request).then(r => r.data);
+
+export const validateModel = (shelterConfig, sensorCsv) => {
+  const formData = new FormData();
+  formData.append('shelter_config', JSON.stringify(shelterConfig));
+  formData.append('sensor_csv', sensorCsv);
+  return API.post('/api/validate-model', formData).then(r => r.data);
+};
